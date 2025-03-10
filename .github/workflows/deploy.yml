@@ -1,0 +1,77 @@
+name: Deploy to Cloud Run
+
+on:
+  push:
+    branches: ['main']
+  pull_request:
+    branches: ['main']
+
+env:
+  REGISTRY: europe-west3-docker.pkg.dev
+  PROJECT_ID: core-nova
+  REGION: europe-west3
+  SERVICE_NAME: rovet-back-end
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Google Cloud Auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for GCP
+        run: gcloud auth configure-docker ${{ env.REGISTRY }}
+
+      - name: Build and publish to GCR
+        uses: RafikFarhad/push-to-gcr-github-action@v5-rc1
+        with:
+          registry: ${{ env.REGISTRY }}
+          project_id: ${{ env.PROJECT_ID }}
+          image_name: docker/rovet-back-end
+          image_tag: latest,${{ github.sha }}
+          dockerfile: ./Dockerfile
+          context: .
+
+      - name: Deploy to Cloud Run
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ env.SERVICE_NAME }}
+          image: ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/docker/rovet-back-end:latest
+          region: ${{ env.REGION }}
+          env_vars: |
+            POSTGRES_SERVER=${{ secrets.POSTGRES_SERVER }}
+            POSTGRES_USER=${{ secrets.POSTGRES_USER }}
+            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+            POSTGRES_DB=${{ secrets.POSTGRES_DB }}
+            POSTGRES_PORT=${{ secrets.POSTGRES_PORT }}
+            SECRET_KEY=${{ secrets.SECRET_KEY }}
+            ACCESS_TOKEN_EXPIRE_MINUTES=30
+            BACKEND_CORS_ORIGINS=["https://rovet.app","https://api.rovet.app"]
+
+      - name: Run Database Migrations
+        run: |
+          gcloud run jobs create migrate-db \
+            --image=${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/docker/rovet-back-end:latest \
+            --command="poetry" \
+            --args="run,alembic,upgrade,head" \
+            --region=${{ env.REGION }} \
+            --set-env-vars="POSTGRES_SERVER=${{ secrets.POSTGRES_SERVER }}" \
+            --set-env-vars="POSTGRES_USER=${{ secrets.POSTGRES_USER }}" \
+            --set-env-vars="POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" \
+            --set-env-vars="POSTGRES_DB=${{ secrets.POSTGRES_DB }}" \
+            --set-env-vars="POSTGRES_PORT=${{ secrets.POSTGRES_PORT }}" \
+          || true
+          gcloud run jobs execute migrate-db --region=${{ env.REGION }} 

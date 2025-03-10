@@ -1,0 +1,74 @@
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.docs import (
+    get_redoc_html,
+    get_swagger_ui_html,
+)
+from fastapi.staticfiles import StaticFiles
+
+from app.core.config import settings
+from app.core.docs import get_api_documentation, get_api_summary
+from app.middleware.logging_middleware import LoggingMiddleware
+from app.middleware.auth_middleware import AuthMiddleware, AdminMiddleware
+from app.api.v1.api import api_router
+
+
+app = FastAPI(
+    title="Rovet Backend API",
+    description=get_api_summary(),
+    version="1.0.0",
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+    openapi_url="/api/openapi.json"
+)
+
+# Mount static files
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Custom API documentation
+@app.get("/docs", include_in_schema=False)
+async def custom_swagger_ui_html():
+    return get_swagger_ui_html(
+        openapi_url=f"{settings.API_V1_STR}/openapi.json",
+        title=f"{settings.PROJECT_NAME} - Swagger UI",
+        oauth2_redirect_url="/docs/oauth2-redirect",
+        swagger_js_url="/static/swagger-ui-bundle.js",
+        swagger_css_url="/static/swagger-ui.css",
+    )
+
+@app.get("/redoc", include_in_schema=False)
+async def redoc_html():
+    return get_redoc_html(
+        openapi_url=f"{settings.API_V1_STR}/openapi.json",
+        title=f"{settings.PROJECT_NAME} - ReDoc",
+        redoc_js_url="/static/redoc.standalone.js",
+    )
+
+# Set all CORS enabled origins
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.BACKEND_CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Add custom logging middleware
+app.add_middleware(LoggingMiddleware)
+
+# Add authentication middleware in correct order
+app.add_middleware(AdminMiddleware)  # Admin middleware first
+app.add_middleware(AuthMiddleware)   # Auth middleware second
+
+# Include API router
+app.include_router(api_router, prefix=settings.API_V1_STR)
+
+# Custom OpenAPI schema
+app.openapi = lambda: get_api_documentation(app)
+
+@app.get("/", tags=["Health Check"])
+def health_check():
+    """
+    Health check endpoint to verify API is running.
+    """
+    return {"status": "healthy", "version": "1.0.0"} 

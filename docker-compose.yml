@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  api:
+    container_name: rovet-backend
+    build: .
+    ports:
+      - "8001:8000"
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  test:
+    container_name: rovet-test
+    build: .
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_DB=test_db
+      - SECRET_KEY=test-secret-key
+      - TESTING=true
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["pytest", "app/tests/", "-v"]
+
+  db:
+    container_name: rovet-db
+    image: postgres:15-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-test-db.sh:/docker-entrypoint-initdb.d/init-test-db.sh
+    env_file:
+      - .env
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  prometheus:
+    container_name: rovet-prometheus
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    ports:
+      - "9090:9090"
+    depends_on:
+      api:
+        condition: service_healthy
+
+  grafana:
+    container_name: rovet-grafana
+    image: grafana/grafana:latest
+    volumes:
+      - grafana_data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    ports:
+      - "3000:3000"
+    depends_on:
+      prometheus:
+        condition: service_started
+
+volumes:
+  postgres_data:
+  prometheus_data:
+  grafana_data: 
