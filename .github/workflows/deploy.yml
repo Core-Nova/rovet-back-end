@@ -58,7 +58,6 @@ jobs:
             POSTGRES_DB=${{ secrets.POSTGRES_DB }}
             POSTGRES_PORT=${{ secrets.POSTGRES_PORT }}
             SECRET_KEY=${{ secrets.SECRET_KEY }}
-            BACKEND_CORS_ORIGINS=${{ secrets.BACKEND_CORS_ORIGINS }}
             ACCESS_TOKEN_EXPIRE_MINUTES=30
 
       - name: Run Database Migrations
