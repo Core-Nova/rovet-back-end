@@ -168,9 +168,13 @@ cython_debug/
 #.idea/
 
 # PyPI configuration file
-.pypirc
-
 # Application logs
 logs/
 *.log
 *.log.*
+
+# Local files
+.pypirc
+/.idea
+test.db
+poetry.lock

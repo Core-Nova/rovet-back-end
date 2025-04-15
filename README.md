@@ -204,8 +204,8 @@ python -m app.scripts.seed_db
 
 ### 5. Verify Installation
 Visit these URLs in your browser:
-- API Documentation: http://localhost:8000/api/docs
-- Health Check: http://localhost:8000/api/v1/health
+- API Documentation: http://localhost:8001/api/docs
+- Health Check: http://localhost:8001/api/v1/health
 
 ## Default Users
 
