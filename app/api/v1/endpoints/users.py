@@ -25,9 +25,6 @@ def get_all_users(
     Get all users with optional filtering and pagination.
     Only admin users can access this endpoint.
     """
-    if current_user.role != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Not enough permissions")
-    
     user_repo = UserRepository(db)
     filter_params = UserFilter(email=email, role=role, is_active=is_active)
     users, total = user_repo.get_filtered_users(filter_params, page, size)
@@ -44,15 +41,13 @@ def get_all_users(
 def get_user_by_id(
     user_id: int,
     db: Session = Depends(deps.get_db),
-    current_user: User = Depends(deps.get_current_user)
+    current_user: User = Depends(deps.get_current_user),
+    admin_user: User = Depends(deps.get_current_admin_user)
 ) -> Any:
     """
     Get a specific user by ID.
     Only admin users can access this endpoint.
     """
-    if current_user.role != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Not enough permissions")
-    
     user_repo = UserRepository(db)
     user = user_repo.get_by_id(user_id)
     if not user:
@@ -65,7 +60,8 @@ def update_user(
     user_id: int,
     user_update: UserUpdate,
     db: Session = Depends(deps.get_db),
-    current_user: User = Depends(deps.get_current_user)
+    current_user: User = Depends(deps.get_current_user),
+    admin_user: User = Depends(deps.get_current_admin_user)
 ) -> Any:
     """
     Update a user's information.
@@ -86,7 +82,8 @@ def update_user(
 def delete_user(
     user_id: int,
     db: Session = Depends(deps.get_db),
-    current_user: User = Depends(deps.get_current_user)
+    current_user: User = Depends(deps.get_current_user),
+    admin_user: User = Depends(deps.get_current_admin_user)
 ) -> None:
     """
     Delete a user.

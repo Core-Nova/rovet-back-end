@@ -42,7 +42,7 @@ def mock_target_user():
     """Create a mock target user for testing update/delete operations"""
     return MagicMock(
         id=3,
-        email="target@example.com",
+        email="test@example.com",
         full_name="Target User",
         role=UserRole.USER,
         is_active=True
@@ -98,7 +98,7 @@ def mock_user_repository_setup():
     mock_repo = MagicMock()
     mock_user = MagicMock(
         id=3,
-        email="target@example.com",
+        email="test@example.com",
         full_name="Target User",
         role=UserRole.USER,
         is_active=True
@@ -183,7 +183,7 @@ def test_get_all_users_as_admin(client: TestClient, mock_auth_service_setup, moc
         assert response.status_code == 200
         data = response.json()
         assert len(data["items"]) == 1
-        assert data["items"][0]["email"] == "target@example.com"
+        assert data["items"][0]["email"] == "test@example.com"
         logger.info("Get all users test passed")
         mock_auth_service_setup.verify_token.assert_called_once_with(token)
         mock_auth_service_setup.get_current_user.assert_called_once_with(token)
@@ -222,11 +222,11 @@ def test_get_all_users_with_filters(client: TestClient, mock_auth_service_setup,
         
         logger.info(f"Making request to {settings.API_V1_STR}/users/ with filters")
         logger.debug(f"Request headers: {headers}")
-        logger.debug(f"Request params: email=target@example.com, role={UserRole.USER.value}")
+        logger.debug(f"Request params: email=test@example.com, role={UserRole.USER.value}")
         
         response = client.get(
             f"{settings.API_V1_STR}/users/",
-            params={"email": "target@example.com", "role": UserRole.USER.value},
+            params={"email": "test@example.com", "role": UserRole.USER.value},
             headers=headers
         )
         logger.debug(f"Response status: {response.status_code}")
@@ -235,12 +235,12 @@ def test_get_all_users_with_filters(client: TestClient, mock_auth_service_setup,
         assert response.status_code == 200
         data = response.json()
         assert len(data["items"]) == 1
-        assert data["items"][0]["email"] == "target@example.com"
+        assert data["items"][0]["email"] == "test@example.com"
         logger.info("Filtered users test passed")
         mock_auth_service_setup.verify_token.assert_called_once_with(token)
         mock_auth_service_setup.get_current_user.assert_called_once_with(token)
         mock_user_repository_setup.get_filtered_users.assert_called_once_with(
-            UserFilter(email="target@example.com", role=UserRole.USER, is_active=None),
+            UserFilter(email="test@example.com", role=UserRole.USER, is_active=None),
             skip=0,
             limit=settings.DEFAULT_PAGE_SIZE
         )
@@ -277,7 +277,7 @@ def test_get_user_by_id(client: TestClient, mock_auth_service_setup, mock_user_r
         
         assert response.status_code == 200
         data = response.json()
-        assert data["email"] == "target@example.com"
+        assert data["email"] == "test@example.com"
         logger.info("Get user by ID test passed")
         mock_auth_service_setup.verify_token.assert_called_once_with(token)
         mock_auth_service_setup.get_current_user.assert_called_once_with(token)

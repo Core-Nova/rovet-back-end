@@ -14,7 +14,7 @@ services:
       db:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8001/"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -34,7 +34,9 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    command: ["pytest", "app/tests/", "-v"]
+    command: >
+      sh -c "alembic upgrade head &&
+             pytest app/tests/ -v"
 
   db:
     container_name: rovet-db
