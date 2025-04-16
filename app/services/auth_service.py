@@ -1,11 +1,11 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Optional
 from jose import jwt, JWTError
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.security import ALGORITHM, create_access_token, verify_password
+from app.core.security import ALGORITHM, create_access_token
 from app.exceptions.base import UnauthorizedException
 from app.services.user_service import UserService
 from app.models.user import User
@@ -21,9 +21,7 @@ class AuthService:
 
     def create_access_token(self, user: User) -> str:
         logger.info(f"Creating access token for user {user.email}")
-        expire = datetime.utcnow() + timedelta(
-            minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
-        )
+
         token = create_access_token(
             subject=user.id,
             role=user.role,

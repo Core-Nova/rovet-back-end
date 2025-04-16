@@ -5,17 +5,14 @@ from app.api.v1.endpoints import health
 
 api_router = APIRouter()
 
-# Health check
 api_router.include_router(health.router, tags=["health"])
 
-# Authentication
 api_router.include_router(
     auth_controller.router,
     prefix="/auth",
     tags=["authentication"]
 )
 
-# Users
 api_router.include_router(
     user_controller.router,
     prefix="/users",

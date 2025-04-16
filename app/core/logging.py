@@ -8,11 +8,9 @@ import json
 from app.core.config import settings
 
 
-# Create logs directory if it doesn't exist
 LOGS_DIR = Path("logs")
 LOGS_DIR.mkdir(exist_ok=True)
 
-# Custom JSON Formatter
 class JSONFormatter(logging.Formatter):
     def format(self, record):
         log_obj = {
@@ -36,19 +34,15 @@ class JSONFormatter(logging.Formatter):
 
 
 def setup_logging():
-    # Create logger
     logger = logging.getLogger(settings.PROJECT_NAME)
     logger.setLevel(logging.INFO)
 
-    # JSON formatter
     json_formatter = JSONFormatter()
 
-    # Console Handler
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(json_formatter)
     logger.addHandler(console_handler)
 
-    # File Handler for all logs
     file_handler = RotatingFileHandler(
         LOGS_DIR / "app.log",
         maxBytes=10485760,  # 10MB
@@ -58,7 +52,6 @@ def setup_logging():
     file_handler.setFormatter(json_formatter)
     logger.addHandler(file_handler)
 
-    # File Handler for errors
     error_handler = TimedRotatingFileHandler(
         LOGS_DIR / "error.log",
         when="midnight",
@@ -70,11 +63,8 @@ def setup_logging():
     error_handler.setFormatter(json_formatter)
     logger.addHandler(error_handler)
 
-    # Set propagate to False to avoid duplicate logs
     logger.propagate = False
 
     return logger
 
-
-# Create and export logger instance
-logger = setup_logging() 
+logger = setup_logging()

@@ -1,5 +1,4 @@
 import pytest
-from datetime import datetime, timedelta
 from jose import jwt
 from unittest.mock import patch, MagicMock
 import logging
@@ -67,22 +66,18 @@ def test_authenticate_user(mock_db, mock_user_repository):
         hashed_password="$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewKyDAZ1Qh0tXv6"  # Mock hashed password
     )
     
-    # Configure mock repository
     mock_user_repository.get_by_email.return_value = mock_user
     
-    # Test valid credentials
     with patch.object(PasswordService, 'verify_password', return_value=True):
         authenticated_user = auth_service.authenticate_user(mock_user.email, password)
         assert authenticated_user is not None
         assert authenticated_user == mock_user  # Compare the entire mock object
         logger.info("User authentication test passed")
     
-    # Test invalid credentials
     with patch.object(PasswordService, 'verify_password', return_value=False):
         authenticated_user = auth_service.authenticate_user(mock_user.email, "wrong_password")
         assert authenticated_user is None
     
-    # Test non-existent user
     mock_user_repository.get_by_email.return_value = None
     with pytest.raises(UnauthorizedException):
         auth_service.authenticate_user("nonexistent@example.com", password) 

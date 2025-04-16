@@ -1,11 +1,9 @@
 from typing import Optional, List, Any
 from pydantic_settings import BaseSettings
-from pydantic import PostgresDsn, SecretStr, AnyHttpUrl, validator
-import secrets
+from pydantic import PostgresDsn, SecretStr, validator
 import os
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
 load_dotenv()
 
 
@@ -14,24 +12,20 @@ class Settings(BaseSettings):
     VERSION: str = os.getenv("VERSION", "1.0.0")
     API_V1_STR: str = "/api/v1"
     
-    # Security
     SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-here")  # Change this in production
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
     
-    # Database
     POSTGRES_SERVER: str = os.getenv("POSTGRES_SERVER", "db")
     POSTGRES_USER: str = os.getenv("POSTGRES_USER", "postgres")
     POSTGRES_PASSWORD: SecretStr = SecretStr(os.getenv("POSTGRES_PASSWORD", "postgres"))
     POSTGRES_DB: str = os.getenv("POSTGRES_DB", "app_db")
     POSTGRES_PORT: str = os.getenv("POSTGRES_PORT", "5432")
     
-    # CORS
     BACKEND_CORS_ORIGINS: List[str] = eval(os.getenv("BACKEND_CORS_ORIGINS", '["http://localhost:3000"]'))
     
     SQLALCHEMY_DATABASE_URI: Optional[PostgresDsn] = None
 
-    # Pagination
     DEFAULT_PAGE_SIZE: int = 10
     MAX_PAGE_SIZE: int = 100
 

@@ -15,7 +15,6 @@ def create_test_app():
     app.add_middleware(AuthMiddleware)
     app.add_middleware(AdminMiddleware)
     
-    # Include the API router for auth endpoints
     app.include_router(api_router, prefix=settings.API_V1_STR)
     
     @app.get("/test-auth")
@@ -70,7 +69,6 @@ def test_protected_path_with_valid_token(client: TestClient, mock_auth_service):
 
 
 def test_admin_path_with_normal_user(client: TestClient, mock_auth_service):
-    # Configure mock to return normal user
     mock_auth_service.verify_token.return_value = {"sub": "1", "role": UserRole.USER.value}
     mock_auth_service.get_current_user.return_value = MagicMock(
         id=1,
@@ -86,7 +84,6 @@ def test_admin_path_with_normal_user(client: TestClient, mock_auth_service):
 
 
 def test_admin_path_with_admin_user(client: TestClient, mock_auth_service):
-    # Configure mock to return admin user
     mock_auth_service.verify_token.return_value = {"sub": "1", "role": UserRole.ADMIN.value}
     mock_auth_service.get_current_user.return_value = MagicMock(
         id=1,

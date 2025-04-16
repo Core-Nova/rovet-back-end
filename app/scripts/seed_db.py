@@ -11,7 +11,6 @@ def seed_users():
     try:
         print("Successfully connected to the database")
         
-        # Check if admin user already exists
         admin = db.query(User).filter(User.email == "admin@example.com").first()
         if not admin:
             print("Creating admin user...")
@@ -29,7 +28,6 @@ def seed_users():
         else:
             print("Admin user already exists")
 
-        # Add team users if they don't exist
         team_users = [
             {
                 "email": "luci@example.com",
@@ -97,7 +95,6 @@ def seed_users():
         db.commit()
         print("Database seeded successfully!")
         
-        # Print final user count
         user_count = db.query(User).count()
         print(f"Total users in database: {user_count}")
         

@@ -11,7 +11,6 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         request_id = str(uuid.uuid4())
         start_time = time.time()
 
-        # Log request
         logger.info(
             "Incoming request",
             extra={
@@ -26,7 +25,6 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             response = await call_next(request)
             process_time = time.time() - start_time
             
-            # Log response
             logger.info(
                 "Request completed",
                 extra={
@@ -42,7 +40,6 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             
         except Exception as e:
             process_time = time.time() - start_time
-            # Log error
             logger.error(
                 "Request failed",
                 extra={

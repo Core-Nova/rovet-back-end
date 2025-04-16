@@ -2,15 +2,12 @@ import pytest
 from fastapi.testclient import TestClient
 from unittest.mock import patch, MagicMock, call
 import logging
-from fastapi import HTTPException
 
 logger = logging.getLogger(__name__)
 
 from app.core.config import settings
-from app.models.user import User, UserRole
-from app.api.v1.endpoints import users
+from app.models.user import UserRole
 from app.dto.user import UserFilter
-from app.schemas.user import User, PaginatedUserResponse
 
 
 @pytest.fixture(scope="function")

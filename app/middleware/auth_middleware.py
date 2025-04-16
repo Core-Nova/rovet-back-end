@@ -15,7 +15,6 @@ class AuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         logger.info(f"Auth middleware processing request: {request.url.path}")
         
-        # Paths that don't require authentication
         public_paths = [
             "/",  # Root path
             f"{settings.API_V1_STR}/auth/login",
@@ -24,7 +23,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
             "/docs",
             "/redoc",
             f"{settings.API_V1_STR}/openapi.json",
-            "/static",  # Static files
+            "/static",
         ]
 
         if request.url.path in public_paths or request.url.path.startswith("/static/"):

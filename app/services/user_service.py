@@ -1,4 +1,4 @@
-from typing import Optional, Tuple, List
+from typing import Optional
 from sqlalchemy.orm import Session
 import math
 
@@ -17,19 +17,15 @@ class UserService(BaseService[User, UserCreate, UserUpdate]):
         self.password_service = PasswordService()
 
     def create_user(self, user_create: UserCreate) -> User:
-        # Check if user exists
         if self.repository.get_by_email(email=user_create.email):
             raise ConflictException(
                 detail="The user with this email already exists in the system"
             )
         
-        # Validate password
         self.password_service.validate_password(user_create.password)
         
-        # Hash password
         hashed_password = self.password_service.get_password_hash(user_create.password)
         
-        # Create user
         return self.repository.create_with_password(
             user_create=user_create,
             hashed_password=hashed_password
@@ -54,23 +50,19 @@ class UserService(BaseService[User, UserCreate, UserUpdate]):
         update_data = user_update.model_dump(exclude_unset=True)
         
         if user_update.password:
-            # Validate and hash new password
             self.password_service.validate_password(user_update.password)
             update_data["hashed_password"] = self.password_service.get_password_hash(
                 user_update.password
             )
             del update_data["password"]
         
-        # Update email if provided
         if user_update.email and user_update.email != current_user.email:
-            # Check if email is already taken
             if self.repository.get_by_email(email=user_update.email):
                 raise ConflictException(
                     detail="The user with this email already exists in the system"
                 )
             current_user.email = user_update.email
         
-        # Update other fields
         for field, value in update_data.items():
             if hasattr(current_user, field):
                 setattr(current_user, field, value)
@@ -85,17 +77,14 @@ class UserService(BaseService[User, UserCreate, UserUpdate]):
         page: int = 1,
         size: int = 10
     ) -> PaginatedUserResponse:
-        # Calculate skip
         skip = (page - 1) * size
 
-        # Get filtered users and total count
         users, total = self.repository.get_filtered_users(
             filter_params=filter_params,
             skip=skip,
             limit=size
         )
 
-        # Calculate total pages
         pages = math.ceil(total / size)
 
         return PaginatedUserResponse(

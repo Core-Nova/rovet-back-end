@@ -22,10 +22,8 @@ app = FastAPI(
     openapi_url="/api/openapi.json"
 )
 
-# Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Custom API documentation
 @app.get("/docs", include_in_schema=False)
 async def custom_swagger_ui_html():
     return get_swagger_ui_html(
@@ -44,7 +42,6 @@ async def redoc_html():
         redoc_js_url="/static/redoc.standalone.js",
     )
 
-# Set all CORS enabled origins
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.BACKEND_CORS_ORIGINS,
@@ -53,17 +50,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Add custom logging middleware
 app.add_middleware(LoggingMiddleware)
 
-# Add authentication middleware in correct order
-app.add_middleware(AdminMiddleware)  # Admin middleware first
-app.add_middleware(AuthMiddleware)   # Auth middleware second
+app.add_middleware(AdminMiddleware)
+app.add_middleware(AuthMiddleware)
 
-# Include API router
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
-# Custom OpenAPI schema
 app.openapi = lambda: get_api_documentation(app)
 
 @app.get("/", tags=["Health Check"])

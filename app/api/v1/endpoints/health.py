@@ -9,7 +9,6 @@ router = APIRouter()
 @router.get("/health")
 async def health_check(db: Session = Depends(get_db)):
     try:
-        # Check database connection
         db.execute(text("SELECT 1"))
         db_status = "healthy"
     except Exception as e:

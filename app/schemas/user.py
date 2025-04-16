@@ -7,7 +7,7 @@ from app.models.user import UserRole
 class UserBase(BaseModel):
     email: EmailStr
     full_name: str
-    role: str = "user"
+    role: str = UserRole.USER
     is_active: bool = True
 
 

@@ -1,6 +1,5 @@
 from typing import Optional, Tuple, List
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
 
 from app.models.user import User
 from app.schemas.user import UserCreate, UserUpdate, UserFilter
@@ -34,7 +33,6 @@ class UserRepository(BaseRepository[User, UserCreate, UserUpdate]):
     ) -> Tuple[List[User], int]:
         query = self.db.query(self.model)
 
-        # Apply filters
         if filter_params.email:
             query = query.filter(
                 User.email.ilike(f"%{filter_params.email}%")
@@ -44,10 +42,8 @@ class UserRepository(BaseRepository[User, UserCreate, UserUpdate]):
         if filter_params.is_active is not None:
             query = query.filter(User.is_active == filter_params.is_active)
 
-        # Get total count
         total = query.count()
 
-        # Apply pagination
         users = query.offset(skip).limit(limit).all()
 
         return users, total 
