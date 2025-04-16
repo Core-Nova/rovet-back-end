@@ -62,7 +62,7 @@ def get_api_documentation(app):
 
         To get a token, use the login endpoint:
         ```bash
-        curl -X POST http://localhost:8000/api/v1/auth/login \\
+        curl -X POST http://localhost:8001/api/v1/auth/login \\
           -H "Content-Type: application/json" \\
           -d '{"email": "admin@rovet.io", "password": "admin123"}'
         ```
@@ -88,7 +88,7 @@ def get_api_documentation(app):
         Example:
         ```bash
         # Get active users, page 2, 20 items per page
-        curl http://localhost:8000/api/v1/users?is_active=true&page=2&size=20 \\
+        curl http://localhost:8001/api/v1/users?is_active=true&page=2&size=20 \\
           -H "Authorization: Bearer {your_token}"
         ```
         """,

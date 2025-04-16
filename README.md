@@ -178,7 +178,7 @@ SECRET_KEY=your-secret-key-here
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 
 # CORS
-BACKEND_CORS_ORIGINS=["http://localhost:3000","http://localhost:8000"]
+BACKEND_CORS_ORIGINS=["http://localhost:3000","http://localhost:8001"]
 ```
 
 ### 3. Start Docker Services
@@ -231,14 +231,14 @@ All regular users have the password: user123
 
 To authenticate, make a POST request to the login endpoint:
 ```bash
-curl -X POST http://localhost:8000/api/v1/auth/login \
+curl -X POST http://localhost:8001/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email": "admin@rovet.io", "password": "admin123"}'
 ```
 
 Use the returned token in subsequent requests:
 ```bash
-curl -H "Authorization: Bearer {your_token}" http://localhost:8000/api/v1/users
+curl -H "Authorization: Bearer {your_token}" http://localhost:8001/api/v1/users
 ```
 
 ### User Management
@@ -254,13 +254,13 @@ The API supports the following operations:
 
 Get active users:
 ```bash
-curl http://localhost:8000/api/v1/users?is_active=true \
+curl http://localhost:8001/api/v1/users?is_active=true \
   -H "Authorization: Bearer {your_token}"
 ```
 
 Search users by email:
 ```bash
-curl http://localhost:8000/api/v1/users?email=kamen \
+curl http://localhost:8001/api/v1/users?email=kamen \
   -H "Authorization: Bearer {your_token}"
 ```
 
@@ -268,7 +268,7 @@ curl http://localhost:8000/api/v1/users?email=kamen \
 
 All list endpoints support pagination:
 ```bash
-curl http://localhost:8000/api/v1/users?page=2&size=20 \
+curl http://localhost:8001/api/v1/users?page=2&size=20 \
   -H "Authorization: Bearer {your_token}"
 ```
 
@@ -309,8 +309,8 @@ docker-compose down -v
    docker-compose logs
    
    # Verify ports are not in use
-   netstat -an | grep 8000  # Linux/macOS
-   netstat -an | findstr 8000  # Windows
+   netstat -an | grep 8001  # Linux/macOS
+   netstat -an | findstr 8001  # Windows
    ```
 
 2. **Database connection issues**

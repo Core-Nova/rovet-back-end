@@ -29,7 +29,7 @@ RUN poetry install --no-interaction --no-ansi --with dev
 RUN chmod +x scripts/start.sh
 
 # Expose port
-EXPOSE 8000
+EXPOSE 8001
 
 # Command to run the application
 CMD ["./scripts/start.sh"] 
