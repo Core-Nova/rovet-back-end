@@ -1,4 +1,6 @@
 import pytest
+from pydantic.v1 import EmailStr
+
 from app.services.user_service import UserService
 from app.exceptions.base import ConflictException, NotFoundException, ValidationException
 from app.schemas.user import UserCreate, UserUpdate
@@ -8,7 +10,7 @@ from app.tests.utils import create_test_user
 def test_create_user(db):
     user_service = UserService(db)
     user_data = UserCreate(
-        email="test@example.com",
+        email=EmailStr("test@example.com"),
         password="TestPassword123!",
         full_name="Test User"
     )
@@ -21,7 +23,7 @@ def test_create_user(db):
         user_service.create_user(user_data)
     
     weak_password_data = UserCreate(
-        email="another@example.com",
+        email=EmailStr("another@example.com"),
         password="weak",
         full_name="Another User"
     )
@@ -51,7 +53,7 @@ def test_update_user(db):
     user = create_test_user(db)
     
     update_data = UserUpdate(
-        email="updated@example.com",
+        email=EmailStr("updated@example.com"),
         full_name="Updated Name"
     )
     updated_user = user_service.update_user(user.id, update_data)

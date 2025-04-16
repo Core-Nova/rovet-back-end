@@ -53,7 +53,6 @@ def test_protected_path_with_invalid_token(client: TestClient):
 
 
 def test_protected_path_with_valid_token(client: TestClient, mock_auth_service):
-    # Configure mock to return valid token
     mock_auth_service.verify_token.return_value = {"sub": "1", "role": UserRole.USER.value}
     mock_auth_service.get_current_user.return_value = MagicMock(
         id=1,
@@ -93,9 +92,8 @@ def test_admin_path_with_admin_user(client: TestClient, mock_auth_service):
     )
 
     with patch("app.middleware.auth_middleware.AuthService", return_value=mock_auth_service), \
-         patch("app.services.auth_service.jwt.decode") as mock_decode:
-        mock_decode.return_value = {"sub": "1", "role": "admin"}
-        headers = {"Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwicm9sZSI6ImFkbWluIn0.4Adcj3UFYzPUVaVF43FmMze6x7Yp4Yh4j3YwqXh5Yw"}
-        response = client.get(f"{settings.API_V1_STR}/users/", headers=headers)
-        assert response.status_code == 200  # Admin user should have access to admin routes
-        logger.info("Admin path test passed") 
+        patch("app.services.auth_service.jwt.decode") as mock_decode:
+            mock_decode.return_value = {"sub": "1", "role": "admin"}
+            headers = {"Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwicm9sZSI6ImFkbWluIn0.4Adcj3UFYzPUVaVF43FmMze6x7Yp4Yh4j3YwqXh5Yw"}
+            response = client.get(f"{settings.API_V1_STR}/users/", headers=headers)
+            assert response.status_code == 200

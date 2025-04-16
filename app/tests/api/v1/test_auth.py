@@ -12,19 +12,18 @@ from app.models.user import UserRole
 
 def test_register_user(client: TestClient, mock_user_repository):
     logger.info("Testing user registration")
-    with patch("app.api.v1.endpoints.auth.UserRepository", return_value=mock_user_repository):
-        data = {
-            "email": "test@example.com",
-            "password": "Test123!",
-            "full_name": "Test User"
-        }
-        response = client.post(
-            f"{settings.API_V1_STR}/auth/register",
-            json=data,
-        )
-        logger.debug(f"Registration response: {response.status_code}")
-        assert response.status_code == 409
-        assert response.json()["detail"] == "The user with this email already exists in the system"
+    data = {
+        "email": "test@example.com",
+        "password": "Test123!",
+        "full_name": "Test User"
+    }
+    response = client.post(
+        f"{settings.API_V1_STR}/auth/register",
+        json=data,
+    )
+    logger.debug(f"Registration response: {response.status_code}")
+    assert response.status_code == 409
+    assert response.json()["detail"] == "The user with this email already exists in the system"
 
 
 def test_register_existing_user(client: TestClient, mock_user_repository):
@@ -37,19 +36,18 @@ def test_register_existing_user(client: TestClient, mock_user_repository):
         is_active=True
     )
     
-    with patch("app.api.v1.endpoints.auth.UserRepository", return_value=mock_user_repository):
-        data = {
-            "email": "test@example.com",
-            "password": "Test123!",
-            "full_name": "Test User"
-        }
-        response = client.post(
-            f"{settings.API_V1_STR}/auth/register",
-            json=data,
-        )
-        logger.debug(f"Registration response: {response.status_code}")
-        assert response.status_code == 409
-        assert response.json()["detail"] == "The user with this email already exists in the system"
+    data = {
+        "email": "test@example.com",
+        "password": "Test123!",
+        "full_name": "Test User"
+    }
+    response = client.post(
+        f"{settings.API_V1_STR}/auth/register",
+        json=data,
+    )
+    logger.debug(f"Registration response: {response.status_code}")
+    assert response.status_code == 409
+    assert response.json()["detail"] == "The user with this email already exists in the system"
 
 
 def test_login_user(client: TestClient, mock_auth_service):

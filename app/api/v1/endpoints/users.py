@@ -7,7 +7,7 @@ from app.core.config import settings
 from app.dto.user import UserFilter, UserUpdate
 from app.models.user import User, UserRole
 from app.repositories.user_repository import UserRepository
-from app.schemas.user import User, UserCreate, UserUpdate as UserUpdateSchema, PaginatedUserResponse
+from app.schemas.user import User, PaginatedUserResponse
 
 router = APIRouter()
 

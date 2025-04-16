@@ -53,7 +53,6 @@ class AuthMiddleware(BaseHTTPMiddleware):
             user = auth_service.get_current_user(token)
             logger.info(f"Successfully authenticated user: {user.email} with role {user.role}")
             
-            # Add user to request state
             logger.info("Adding user to request state")
             request.state.user = user
             request.state.is_admin = user.role == UserRole.ADMIN
@@ -84,14 +83,12 @@ class AdminMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         logger.info(f"Admin middleware processing request: {request.url.path}")
         
-        # Only check admin routes
         admin_base_path = f"{settings.API_V1_STR}/users"
         
         if not request.url.path.startswith(admin_base_path):
             logger.info(f"Request path {request.url.path} is not an admin route, skipping admin check")
             return await call_next(request)
 
-        # Check if user is authenticated
         if not hasattr(request.state, "user"):
             logger.error("No user found in request state")
             return JSONResponse(
@@ -99,7 +96,6 @@ class AdminMiddleware(BaseHTTPMiddleware):
                 content={"detail": "Missing or invalid authentication token"}
             )
 
-        # Check if user is admin
         if not request.state.is_admin:
             logger.error(f"User {request.state.user.email} is not an admin")
             return JSONResponse(

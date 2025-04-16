@@ -1,5 +1,5 @@
 import pytest
-from jose import jwt
+from jose import jwt, JWTError
 from unittest.mock import patch, MagicMock
 import logging
 from fastapi import HTTPException
@@ -47,11 +47,11 @@ def test_verify_token_invalid(mock_db):
     token = "invalid_token"
     
     with patch("app.services.auth_service.jwt.decode") as mock_decode:
-        mock_decode.side_effect = jwt.InvalidTokenError("Invalid token: Not enough segments")
+        mock_decode.side_effect = JWTError("Not enough segment")
         with pytest.raises(HTTPException) as exc_info:
             auth_service.verify_token(token)
         assert exc_info.value.status_code == 401
-        assert exc_info.value.detail == "Invalid token: Not enough segments"
+        assert exc_info.value.detail == "Invalid token: Not enough segment"
         logger.info("Invalid token test passed")
 
 
