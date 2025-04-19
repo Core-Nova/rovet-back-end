@@ -1,5 +1,17 @@
 FROM python:3.11-slim
 
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    POETRY_VERSION=1.7.1 \
+    POETRY_HOME="/opt/poetry" \
+    POETRY_VIRTUALENVS_CREATE=false \
+    POETRY_NO_INTERACTION=1 \
+    POETRY_CACHE_DIR='/var/cache/pypoetry'
+
+# Add Poetry to PATH
+ENV PATH="$POETRY_HOME/bin:$PATH"
+
 WORKDIR /app
 
 # Install system dependencies
@@ -7,17 +19,17 @@ RUN apt-get update && apt-get install -y \
     gcc \
     postgresql-client \
     curl \
+    dos2unix \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Poetry
-RUN pip install poetry
+RUN curl -sSL https://install.python-poetry.org | python3 -
 
-# Copy Poetry files
+# Copy only requirements first to leverage Docker cache
 COPY pyproject.toml poetry.lock* ./
 
-# Configure Poetry
-RUN poetry config virtualenvs.create false \
-    && poetry install --no-interaction --no-ansi --no-root --with dev
+# Install dependencies
+RUN poetry install --no-interaction --no-ansi --no-root --with dev
 
 # Copy application code
 COPY . .
@@ -25,11 +37,5 @@ COPY . .
 # Install the project
 RUN poetry install --no-interaction --no-ansi --with dev
 
-# Make startup script executable
-RUN chmod +x scripts/start.sh
-
 # Expose port
-EXPOSE 8001
-
-# Command to run the application
-CMD ["./scripts/start.sh"] 
+EXPOSE 8001 

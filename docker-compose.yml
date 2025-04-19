@@ -7,12 +7,16 @@ services:
     ports:
       - "8001:8001"
     volumes:
-      - .:/app
+      - ./:/app:cached
     env_file:
       - .env
     depends_on:
       db:
         condition: service_healthy
+    command: >
+      bash -c "mkdir -p static &&
+               poetry run alembic upgrade head || echo 'Migration failed but continuing...' &&
+               poetry run uvicorn app.main:app --host 0.0.0.0 --port 8001"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8001/"]
       interval: 10s
@@ -24,7 +28,7 @@ services:
     container_name: rovet-test
     build: .
     volumes:
-      - .:/app
+      - ./:/app:cached
     env_file:
       - .env
     environment:
@@ -35,8 +39,8 @@ services:
       db:
         condition: service_healthy
     command: >
-      sh -c "alembic upgrade head &&
-             pytest app/tests/ -v"
+      bash -c "poetry run alembic upgrade head &&
+               poetry run pytest app/tests/ -v"
 
   db:
     container_name: rovet-db

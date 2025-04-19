@@ -1,7 +1,8 @@
 #!/bin/bash
+set -e
 
-# Run migrations
-poetry run alembic upgrade head
+echo "Running database migrations..."
+poetry run alembic upgrade head || echo "Migration failed but continuing..."
 
-# Start the service
-poetry run uvicorn app.main:app --host 0.0.0.0 --port 8001
+echo "Starting the service..."
+exec poetry run uvicorn app.main:app --host 0.0.0.0 --port 8001
