@@ -2,12 +2,18 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 import pytest
 from unittest.mock import patch, MagicMock
+import logging
 
 from app.middleware.auth_middleware import AuthMiddleware, AdminMiddleware
 from app.core.config import settings
 from app.models.user import UserRole
 from app.api.v1.api import api_router
 from app.main import app
+
+
+USER_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwicm9sZSI6InVzZXIifQ.4Adcj3UFYzPUVaVF43FmMze6x7Yp4Yh4j3YwqXh5Yw"
+ADMIN_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwicm9sZSI6IkFETUlOIn0.4Adcj3UFYzPUVaVF43FmMze6x7Yp4Yh4j3Yw"
+INVALID_TOKEN = "invalid_token"
 
 
 def create_test_app():
@@ -47,13 +53,13 @@ def test_protected_path_without_token(client: TestClient):
 
 
 def test_protected_path_with_invalid_token(client: TestClient):
-    headers = {"Authorization": "Bearer invalid_token"}
+    headers = {"Authorization": f"Bearer {INVALID_TOKEN}"}
     response = client.get(f"{settings.API_V1_STR}/users/", headers=headers)
     assert response.status_code == 401
 
 
 def test_protected_path_with_valid_token(client: TestClient, mock_auth_service):
-    mock_auth_service.verify_token.return_value = {"sub": "1", "role": UserRole.USER.value}
+    mock_auth_service.verify_token.return_value = {"sub": "1", "role": UserRole.USER}
     mock_auth_service.get_current_user.return_value = MagicMock(
         id=1,
         email="test@example.com",
@@ -62,13 +68,13 @@ def test_protected_path_with_valid_token(client: TestClient, mock_auth_service):
     )
 
     with patch("app.middleware.auth_middleware.AuthService", return_value=mock_auth_service):
-        headers = {"Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwicm9sZSI6InVzZXIifQ.4Adcj3UFYzPUVaVF43FmMze6x7Yp4Yh4j3YwqXh5Yw"}
+        headers = {"Authorization": f"Bearer {USER_TOKEN}"}
         response = client.get(f"{settings.API_V1_STR}/users/", headers=headers)
-        assert response.status_code == 403  # Normal user should not have access to admin routes
+        assert response.status_code == 403
 
 
 def test_admin_path_with_normal_user(client: TestClient, mock_auth_service):
-    mock_auth_service.verify_token.return_value = {"sub": "1", "role": UserRole.USER.value}
+    mock_auth_service.verify_token.return_value = {"sub": "1", "role": UserRole.USER}
     mock_auth_service.get_current_user.return_value = MagicMock(
         id=1,
         email="test@example.com",
@@ -77,9 +83,9 @@ def test_admin_path_with_normal_user(client: TestClient, mock_auth_service):
     )
 
     with patch("app.middleware.auth_middleware.AuthService", return_value=mock_auth_service):
-        headers = {"Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwicm9sZSI6InVzZXIifQ.4Adcj3UFYzPUVaVF43FmMze6x7Yp4Yh4j3YwqXh5Yw"}
+        headers = {"Authorization": f"Bearer {USER_TOKEN}"}
         response = client.get(f"{settings.API_V1_STR}/users/", headers=headers)
-        assert response.status_code == 403  # Normal user should not have access to admin routes
+        assert response.status_code == 403
 
 
 def test_admin_path_with_admin_user(client: TestClient, mock_auth_service):
@@ -92,8 +98,9 @@ def test_admin_path_with_admin_user(client: TestClient, mock_auth_service):
     )
 
     with patch("app.middleware.auth_middleware.AuthService", return_value=mock_auth_service), \
-        patch("app.services.auth_service.jwt.decode") as mock_decode:
-            mock_decode.return_value = {"sub": "1", "role": "admin"}
-            headers = {"Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwicm9sZSI6ImFkbWluIn0.4Adcj3UFYzPUVaVF43FmMze6x7Yp4Yh4j3YwqXh5Yw"}
+         patch("app.services.auth_service.jwt.decode") as mock_decode, \
+         patch("app.api.deps.AuthService", return_value=mock_auth_service):
+            mock_decode.return_value = {"sub": "1", "role": UserRole.ADMIN.value}
+            headers = {"Authorization": f"Bearer {ADMIN_TOKEN}"}
             response = client.get(f"{settings.API_V1_STR}/users/", headers=headers)
             assert response.status_code == 200

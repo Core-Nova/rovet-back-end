@@ -93,8 +93,11 @@ def test_get_current_user(client: TestClient, mock_auth_service):
     mock_auth_service.get_current_user.return_value = mock_user
     mock_auth_service.verify_token.return_value = {"sub": "1", "role": UserRole.USER.value}
     
-    with patch("app.middleware.auth_middleware.AuthService", return_value=mock_auth_service):
-        headers = {"Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwicm9sZSI6InVzZXIifQ.4Adcj3UFYzPUVaVF43FmMze6x7Yp4Yh4j3YwqXh5Yw"}
+    with patch("app.middleware.auth_middleware.AuthService", return_value=mock_auth_service), \
+         patch("app.services.auth_service.jwt.decode") as mock_decode:
+        mock_decode.return_value = {"sub": "1", "role": UserRole.USER.value}
+        token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwicm9sZSI6InVzZXIifQ.4Adcj3UFYzPUVaVF43FmMze6x7Yp4Yh4j3Yw"
+        headers = {"Authorization": f"Bearer {token}"}
         response = client.get(f"{settings.API_V1_STR}/auth/me", headers=headers)
         assert response.status_code == 200
         data = response.json()

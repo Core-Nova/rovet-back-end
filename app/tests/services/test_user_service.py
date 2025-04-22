@@ -36,15 +36,12 @@ def test_authenticate(db):
     password = "TestPassword123!"
     user = create_test_user(db, password=password)
     
-    # Test successful authentication
     authenticated_user = user_service.authenticate(user.email, password)
     assert authenticated_user is not None
     assert authenticated_user.id == user.id
     
-    # Test wrong password
     assert user_service.authenticate(user.email, "wrong-password") is None
     
-    # Test non-existent user
     assert user_service.authenticate("nonexistent@example.com", password) is None
 
 

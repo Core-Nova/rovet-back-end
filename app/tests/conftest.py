@@ -15,6 +15,7 @@ from app.db.session import Base
 from app.main import app
 from app.db.session import get_db
 from app.models.user import UserRole
+from app.services.auth_service import AuthService
 
 SQLALCHEMY_TEST_DATABASE_URL = "sqlite:///./test.db"
 
@@ -108,4 +109,11 @@ def mock_auth_service():
     mock_service.create_access_token.return_value = "mock_token"
     mock_service.verify_token.return_value = {"sub": "1", "role": UserRole.USER}
     logger.info("Mock auth service created")
-    return mock_service 
+    return mock_service
+
+@pytest.fixture(scope="function")
+def auth_service(mock_db):
+    logger.info("Creating auth service")
+    service = AuthService(mock_db)
+    logger.info("Auth service created")
+    return service 
