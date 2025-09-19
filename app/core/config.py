@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     POSTGRES_DB: str = os.getenv("POSTGRES_DB", "app_db")
     POSTGRES_PORT: str = os.getenv("POSTGRES_PORT", "5432")
     
-    BACKEND_CORS_ORIGINS: List[str] = eval(os.getenv("BACKEND_CORS_ORIGINS", '["http://localhost:3001"]'))
+    BACKEND_CORS_ORIGINS: List[str] = eval(os.getenv("BACKEND_CORS_ORIGINS", '["http://localhost:8001"]'))
     
     SQLALCHEMY_DATABASE_URI: Optional[PostgresDsn] = None
 
