@@ -5,7 +5,7 @@ services:
     container_name: rovet-backend
     build: .
     ports:
-      - "8001:8001"
+      - "3001:3001"
     volumes:
       - ./:/app:cached
     env_file:
@@ -16,9 +16,9 @@ services:
     command: >
       bash -c "mkdir -p static &&
                poetry run alembic upgrade head || echo 'Migration failed but continuing...' &&
-               poetry run uvicorn app.main:app --host 0.0.0.0 --port 8001"
+               poetry run uvicorn app.main:app --host 0.0.0.0 --port 3001"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8001/"]
+      test: ["CMD", "curl", "-f", "http://localhost:3001/"]
       interval: 10s
       timeout: 5s
       retries: 3
