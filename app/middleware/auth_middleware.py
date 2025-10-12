@@ -22,7 +22,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
             f"{settings.API_V1_STR}/health",
             "/api/docs",
             "/health",
-            "api/metrics",
+            "/api/metrics",
             "/api/health",
             "/api/redoc",
             f"{settings.API_V1_STR}/openapi.json",

@@ -11,6 +11,7 @@ from app.core.config import settings
 from app.core.docs import get_api_documentation, get_api_summary
 from app.middleware.logging_middleware import LoggingMiddleware
 from app.middleware.auth_middleware import AuthMiddleware, AdminMiddleware
+from app.middleware.metrics_middleware import MetricsMiddleware
 from app.api.v1.api import api_router
 
 
@@ -53,6 +54,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.add_middleware(MetricsMiddleware)
 app.add_middleware(LoggingMiddleware)
 
 app.add_middleware(AdminMiddleware)

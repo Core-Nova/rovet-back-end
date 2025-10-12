@@ -1,11 +1,12 @@
 from fastapi import APIRouter
 
 from app.controllers import auth_controller, user_controller
-from app.api.v1.endpoints import health
+from app.api.v1.endpoints import health, metrics
 
 api_router = APIRouter()
 
 api_router.include_router(health.router, tags=["health"])
+api_router.include_router(metrics.router, tags=["metrics"])
 
 api_router.include_router(
     auth_controller.router,

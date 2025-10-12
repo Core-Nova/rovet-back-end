@@ -60,7 +60,6 @@ jobs:
             POSTGRES_PORT=${{ secrets.POSTGRES_PORT }}
             SECRET_KEY=${{ secrets.SECRET_KEY }}
             ACCESS_TOKEN_EXPIRE_MINUTES=31
-            PORT=8080
 
       - name: Run Database Migrations
         run: |
