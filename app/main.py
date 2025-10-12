@@ -64,4 +64,11 @@ def health_check():
     """
     Health check endpoint to verify API is running.
     """
-    return {"status": "healthy", "version": "1.0.0"} 
+    return {"status": "healthy", "version": "1.0.0"}
+
+@app.get("/health", tags=["Health Check"])
+def health_check():
+    """
+    Health check endpoint to verify API is running.
+    """
+    return {"status": "healthy", "version": "1.0.0"}
