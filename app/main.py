@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import (
@@ -22,7 +23,9 @@ app = FastAPI(
     openapi_url="/api/openapi.json"
 )
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
+# Mount static files if directory exists
+if os.path.exists("static"):
+    app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/docs", include_in_schema=False)
 async def custom_swagger_ui_html():

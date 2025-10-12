@@ -51,6 +51,7 @@ jobs:
           service: ${{ env.SERVICE_NAME }}
           image: ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/docker/rovet-back-end:latest
           region: ${{ env.REGION }}
+          flags: '--allow-unauthenticated --port=8080 --timeout=300 --memory=1Gi'
           env_vars: |
             POSTGRES_SERVER=${{ secrets.POSTGRES_SERVER }}
             POSTGRES_USER=${{ secrets.POSTGRES_USER }}
@@ -59,10 +60,11 @@ jobs:
             POSTGRES_PORT=${{ secrets.POSTGRES_PORT }}
             SECRET_KEY=${{ secrets.SECRET_KEY }}
             ACCESS_TOKEN_EXPIRE_MINUTES=31
+            PORT=8080
 
       - name: Run Database Migrations
         run: |
-          gcloud run jobs create migrate-db \
+          gcloud run jobs create-or-replace migrate-db \
             --image=${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/docker/rovet-back-end:latest \
             --command="poetry" \
             --args="run,alembic,upgrade,head" \

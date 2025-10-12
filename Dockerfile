@@ -37,5 +37,11 @@ COPY . .
 # Install the project
 RUN poetry install --no-interaction --no-ansi --with dev
 
+# Create static directory
+RUN mkdir -p static
+
 # Expose port
-EXPOSE 8001 
+EXPOSE 8001
+
+# Add startup command
+CMD ["sh", "-c", "poetry run alembic upgrade head || echo 'Migration failed but continuing...' && poetry run uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8001}"] 
