@@ -13,6 +13,7 @@ from app.middleware.logging_middleware import LoggingMiddleware
 from app.middleware.auth_middleware import AuthMiddleware, AdminMiddleware
 from app.middleware.metrics_middleware import MetricsMiddleware
 from app.api.v1.api import api_router
+from app.api.v1.endpoints.metrics import get_metrics
 
 
 app = FastAPI(
@@ -61,6 +62,12 @@ app.add_middleware(AdminMiddleware)
 app.add_middleware(AuthMiddleware)
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
+
+# Add direct metrics endpoint for Prometheus (without /api/v1 prefix)
+@app.get("/api/metrics", include_in_schema=False)
+async def metrics_endpoint():
+    """Direct metrics endpoint for Prometheus scraping."""
+    return await get_metrics()
 
 app.openapi = lambda: get_api_documentation(app)
 

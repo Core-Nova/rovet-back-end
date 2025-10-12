@@ -20,13 +20,15 @@ class AuthMiddleware(BaseHTTPMiddleware):
             f"{settings.API_V1_STR}/auth/login",
             f"{settings.API_V1_STR}/auth/register",
             f"{settings.API_V1_STR}/health",
+            f"{settings.API_V1_STR}/metrics",
+            f"{settings.API_V1_STR}/openapi.json",
             "/api/docs",
-            "/health",
             "/api/metrics",
             "/api/health",
             "/api/redoc",
-            f"{settings.API_V1_STR}/openapi.json",
+            "/api/openapi.json",
             "/static",
+            "/health",
         ]
 
         if request.url.path in public_paths or request.url.path.startswith("/static/"):
