@@ -60,12 +60,21 @@ jobs:
 
       - name: Run Database Migrations
         run: |
-          gcloud run jobs create-or-replace migrate-db \
+          # Delete existing job if it exists (ignore errors)
+          gcloud run jobs delete migrate-db --region=${{ env.REGION }} --quiet || true
+          
+          # Create new migration job
+          gcloud run jobs create migrate-db \
             --image=${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/docker/rovet-back-end:latest \
             --command="poetry" \
             --args="run,alembic,upgrade,head" \
             --region=${{ env.REGION }} \
             --set-env-vars="DATABASE_URL=${{ secrets.DATABASE_URL }}" \
             --set-env-vars="ENVIRONMENT=production" \
-          || true
-          gcloud run jobs execute migrate-db --region=${{ env.REGION }} 
+            --memory=1Gi \
+            --cpu=1 \
+            --max-retries=3 \
+            --parallelism=1
+          
+          # Execute the migration job
+          gcloud run jobs execute migrate-db --region=${{ env.REGION }} --wait 
