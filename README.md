@@ -394,7 +394,7 @@ The application is configured for deployment to Google Cloud Run with the follow
 - `SECRET_KEY`: Application secret key
 - `GCP_SA_KEY`: Google Cloud Service Account key
 
-See `DATABASE_SETUP.md` for detailed deployment instructions.
+See `DEPLOYMENT_GUIDE.md` for detailed deployment instructions.
 
 ## Contributing
 
