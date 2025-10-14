@@ -9,6 +9,9 @@ A FastAPI-based backend service providing user management and authentication fun
 * **Admin Controls** - Protected endpoints for user administration
 * **Middleware Security** - Token validation and role-based access control
 * **Pagination & Filtering** - Advanced user listing with filtering capabilities
+* **Prometheus Metrics** - Built-in metrics endpoint for monitoring and observability
+* **Hybrid Database Support** - Local PostgreSQL for development, Neon DB for production
+* **Cloud Run Ready** - Optimized for Google Cloud Platform deployment
 
 ## System Requirements
 
@@ -166,11 +169,11 @@ cd rovet-back-end
 
 Create a `.env` file in the project root:
 ```bash
-# Database
+# Database (Local Development)
 POSTGRES_SERVER=db
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres
-POSTGRES_DB=app
+POSTGRES_DB=app_db
 POSTGRES_PORT=5432
 
 # Application
@@ -179,7 +182,12 @@ ACCESS_TOKEN_EXPIRE_MINUTES=30
 
 # CORS
 BACKEND_CORS_ORIGINS=["http://localhost:3000","http://localhost:8001"]
+
+# Environment (automatically detected)
+ENVIRONMENT=development
 ```
+
+**Note**: For production deployment, the application automatically uses Neon DB when `DATABASE_URL` is provided via environment variables.
 
 ### 3. Start Docker Services
 ```bash
@@ -205,7 +213,8 @@ python -m app.scripts.seed_db
 ### 5. Verify Installation
 Visit these URLs in your browser:
 - API Documentation: http://localhost:8001/api/docs
-- Health Check: http://localhost:8001/api/v1/health
+- Health Check: http://localhost:8001/
+- Metrics Endpoint: http://localhost:8001/api/metrics (Prometheus format)
 
 ## Default Users
 
@@ -281,6 +290,19 @@ Inside the Docker container:
 pytest
 ```
 
+### Monitoring & Metrics
+
+The application includes built-in Prometheus metrics at `/api/metrics`:
+- HTTP request metrics (count, duration)
+- Authentication metrics (login attempts, registrations)
+- Database query metrics
+- Custom application metrics
+
+Access metrics in Prometheus format:
+```bash
+curl http://localhost:8001/api/metrics
+```
+
 ### Common Docker Commands
 
 ```bash
@@ -354,6 +376,25 @@ app/
 - Admin endpoints are protected with role-based access control
 - Passwords are hashed using bcrypt
 - CORS is configured for specified origins only
+
+## Deployment
+
+### Local Development
+The application automatically uses your local PostgreSQL database when running with Docker Compose.
+
+### Production (Google Cloud Platform)
+The application is configured for deployment to Google Cloud Run with the following features:
+- Automatic database migration on startup
+- Optimized for serverless environments
+- Built-in health checks and metrics
+- SSL-enabled database connections (Neon DB)
+
+#### Required GitHub Secrets for Production:
+- `DATABASE_URL`: Your Neon DB connection string
+- `SECRET_KEY`: Application secret key
+- `GCP_SA_KEY`: Google Cloud Service Account key
+
+See `DATABASE_SETUP.md` for detailed deployment instructions.
 
 ## Contributing
 

@@ -53,11 +53,8 @@ jobs:
           region: ${{ env.REGION }}
           flags: '--allow-unauthenticated --port=8080 --timeout=300 --memory=1Gi'
           env_vars: |
-            POSTGRES_SERVER=${{ secrets.POSTGRES_SERVER }}
-            POSTGRES_USER=${{ secrets.POSTGRES_USER }}
-            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
-            POSTGRES_DB=${{ secrets.POSTGRES_DB }}
-            POSTGRES_PORT=${{ secrets.POSTGRES_PORT }}
+            DATABASE_URL=${{ secrets.DATABASE_URL }}
+            ENVIRONMENT=production
             SECRET_KEY=${{ secrets.SECRET_KEY }}
             ACCESS_TOKEN_EXPIRE_MINUTES=31
 
@@ -68,10 +65,7 @@ jobs:
             --command="poetry" \
             --args="run,alembic,upgrade,head" \
             --region=${{ env.REGION }} \
-            --set-env-vars="POSTGRES_SERVER=${{ secrets.POSTGRES_SERVER }}" \
-            --set-env-vars="POSTGRES_USER=${{ secrets.POSTGRES_USER }}" \
-            --set-env-vars="POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" \
-            --set-env-vars="POSTGRES_DB=${{ secrets.POSTGRES_DB }}" \
-            --set-env-vars="POSTGRES_PORT=${{ secrets.POSTGRES_PORT }}" \
+            --set-env-vars="DATABASE_URL=${{ secrets.DATABASE_URL }}" \
+            --set-env-vars="ENVIRONMENT=production" \
           || true
           gcloud run jobs execute migrate-db --region=${{ env.REGION }} 

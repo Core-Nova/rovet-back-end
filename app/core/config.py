@@ -18,11 +18,18 @@ class Settings(BaseSettings):
     
     PORT: int = int(os.getenv("PORT", "8001"))
     
+    # Environment detection
+    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
+    
+    # Database configuration
     POSTGRES_SERVER: str = os.getenv("POSTGRES_SERVER", "db")
     POSTGRES_USER: str = os.getenv("POSTGRES_USER", "postgres")
     POSTGRES_PASSWORD: SecretStr = SecretStr(os.getenv("POSTGRES_PASSWORD", "postgres"))
     POSTGRES_DB: str = os.getenv("POSTGRES_DB", "app_db")
     POSTGRES_PORT: str = os.getenv("POSTGRES_PORT", "5432")
+    
+    # Direct database URL for production (Neon DB)
+    DATABASE_URL: Optional[str] = os.getenv("DATABASE_URL")
     
     BACKEND_CORS_ORIGINS: List[str] = eval(os.getenv("BACKEND_CORS_ORIGINS", '["http://localhost:8001"]'))
     
@@ -33,9 +40,18 @@ class Settings(BaseSettings):
 
     @validator("SQLALCHEMY_DATABASE_URI", pre=True)
     def assemble_db_connection(cls, v: Optional[str], values: dict) -> Any:
+        # If DATABASE_URL is provided (production), use it directly
+        if values.get("DATABASE_URL"):
+            print(f"Using production database URL: {values.get('DATABASE_URL')[:50]}...")
+            return values.get("DATABASE_URL")
+        
+        # Otherwise, build from individual components (development)
         if isinstance(v, str):
             return v
+        
         db_name = values.get("POSTGRES_DB")
+        print(f"Building database URI for development: {values.get('POSTGRES_SERVER')}:{values.get('POSTGRES_PORT')}/{db_name}")
+        
         return PostgresDsn.build(
             scheme="postgresql",
             username=values.get("POSTGRES_USER"),
