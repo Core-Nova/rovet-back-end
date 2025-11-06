@@ -290,6 +290,60 @@ Inside the Docker container:
 pytest
 ```
 
+### Run locally without Docker (venv + pip) and use Docker DB
+
+If you prefer to run the API locally without Docker but still use the PostgreSQL database from Docker:
+
+1. Start only the database with Docker:
+```bash
+docker-compose up -d db
+```
+
+2. Create a virtual environment and install dependencies:
+```bash
+python -m venv .venv
+# Windows
+. .venv\\Scripts\\activate
+# macOS/Linux
+# source .venv/bin/activate
+
+pip install -r requirements.txt
+```
+
+3. Configure environment variables to point to the Docker DB (host port 5433):
+```bash
+# Windows PowerShell
+$env:POSTGRES_SERVER = "localhost"
+$env:POSTGRES_PORT = "5433"
+$env:POSTGRES_USER = "postgres"
+$env:POSTGRES_PASSWORD = "postgres"
+$env:POSTGRES_DB = "app_db"
+$env:SECRET_KEY = "your-secret-key-here"
+
+# macOS/Linux
+export POSTGRES_SERVER=localhost
+export POSTGRES_PORT=5433
+export POSTGRES_USER=postgres
+export POSTGRES_PASSWORD=postgres
+export POSTGRES_DB=app_db
+export SECRET_KEY=your-secret-key-here
+```
+
+4. Run database migrations (optional if you already ran them via Docker):
+```bash
+alembic upgrade head
+```
+
+5. Start the API locally:
+```bash
+uvicorn app.main:app --host 0.0.0.0 --port 8001
+```
+
+You can now access:
+- API Docs: http://localhost:8001/api/docs
+- Health: http://localhost:8001/
+- Metrics: http://localhost:8001/api/metrics
+
 ### Monitoring & Metrics
 
 The application includes built-in Prometheus metrics at `/api/metrics`:
