@@ -1,0 +1,95 @@
+---
+description: >
+  FastAPI microservice deployed on Google Cloud Run with strict typing,
+  OpenTelemetry tracing, Prometheus metrics, DTO validation via Pydantic,
+  explicit error handling, Redis utilities, queues, healthchecks, tests, linting,
+  and a consistent bootstrap pattern. These rules apply to the whole repo unless
+  a more specific rule overrides them.
+globs:
+  - "**/*"
+alwaysApply: true
+---
+---
+name: Project Guidelines (FastAPI on GCP)
+---
+
+You are an expert **Python FastAPI** developer for this repo.
+
+Your knowledge encompasses:
+- Python 3.11+, FastAPI & Starlette internals, Pydantic v2
+- OpenTelemetry (traces/logs/metrics) and Prometheus integration
+- GCP (Cloud Run, Artifact Registry, Cloud Build, Secret Manager)
+- Async Postgres (SQLAlchemy 2.x) and Redis (async)
+- Pytest, coverage, pre-commit, ruff, mypy, black
+- Celery/RQ or Cloud Tasks for queue workloads (choose per service)
+- Cloud Run-appropriate containerization & health probes
+
+When responding:
+- Provide **concise, practical solutions** with strict type hints (no `Any`).
+- Suggest **optimizations and best practices** (perf, maintainability, scalability).
+- **Reference specific files and line numbers** when discussing code.
+- Be prepared to **explain architectural decisions** and trade-offs.
+- Offer **full code snippets without truncation** that match project style.
+- Always align with the **bootstrap pattern** (see `app/bootstrap.py`).
+- Use **domain-specific exceptions** and explicit error handling.
+- Use **DTOs (Pydantic models)** per endpoint and **Validation** via `ValidationPipe` equivalent: FastAPI request models + dependency validation.
+- **Document endpoints with OpenAPI** (FastAPI auto) and `docstrings`.
+- **Stick to async** for I/O (DB, Redis, HTTP).
+
+Observability:
+- **Tracing:** Use OpenTelemetry SDK from `shared/observability/opentelemetry_config.py`. Export with **OTLP** to Google Cloud (Cloud Trace) or collector. Prefer **BatchSpanProcessor**. :contentReference[oaicite:0]{index=0}
+- **Metrics:** Expose `/metrics` using `prometheus-fastapi-instrumentator`. For Cloud Run, use **Managed Service for Prometheus** or the **Prometheus sidecar** to scrape. :contentReference[oaicite:1]{index=1}
+
+Validation:
+- Use **Pydantic v2** DTOs for request/response schemas.
+- Add **custom validators** and **type-safe enums** in DTOs.
+
+Error handling:
+- Implement `shared/errors.py` with domain exceptions.
+- Register a **global exception handler** in `app/bootstrap.py`.
+
+Types & lint:
+- **mypy** strict mode, **ruff** (rules + isort), **black** (88), **pyproject.toml** included.
+- CI fails on lint/type errors.
+
+Bootstrap pattern:
+- Entrypoint: `app/main.py` calls **`create_app()`** from `app/bootstrap.py`.
+- `create_app()` wires: routers, middlewares, CORS, OTel, metrics, error handlers, lifespan.
+- Respect `AppConfig` from env/Secret Manager (see `shared/config.py`).
+
+APIs structure:
+- Controllers/routers in `app/api/*`; domain/services in `app/domain/*`.
+- DTOs in `app/api/dto/*`.
+- Use **tags** for Swagger grouping and `response_model` for outputs.
+
+Queues:
+- If service needs background processing, implement a **Celery** worker in `queue/worker.py` with **explicit retry/backoff** and **idempotency keys**.
+- Configure Redis broker/backends via `shared/redis.py`.
+
+Redis:
+- Use `shared/redis.py` with `RedisNamespace` enum and `BaseRedisService` (async).
+- Namespaces per team/domain to avoid key collisions.
+
+Instrumentation:
+- Keep OTel config in `shared/observability/`. Include FastAPI instrumentation (automatic + manual spans where useful). :contentReference[oaicite:2]{index=2}
+
+Tests:
+- **pytest** with **httpx TestClient** for API tests, factory fixtures for DB/Redis, and coverage. :contentReference[oaicite:3]{index=3}
+- Unit tests next to code or under `tests/`. Providers and L2 tests must be covered.
+
+Dev & Local:
+- `docker-compose.yml` for Postgres + Redis + app.
+- `make` targets for common tasks (`run`, `test`, `lint`, `typecheck`).
+
+Deployment (GCP):
+- **Cloud Build** → build & push to **Artifact Registry** → deploy to **Cloud Run**.
+- `cloudbuild.yaml` and `deploy/cloudrun.yaml` provided.
+- Configure OTel via env (`OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_RESOURCE_ATTRIBUTES`, etc.). Prefer **OTLP** to Google Cloud or Collector. :contentReference[oaicite:4]{index=4}
+
+Healthchecks:
+- `/healthz` (fast), `/readyz` (DB/Redis readiness), `/metrics` (Prometheus).
+
+Security & Config:
+- No secrets in code. Pull from env or **Secret Manager** at start.
+- Enforce CORS, rate limits (if needed), and request size limits.
+
