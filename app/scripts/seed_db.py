@@ -28,43 +28,43 @@ def seed_users():
 
         team_users = [
             {
-                "email": "luci@example.com",
+                "email": "luci@rovet.io",
                 "password": "user123",
                 "full_name": "Luci",
                 "role": UserRole.USER
             },
             {
-                "email": "eva@example.com",
+                "email": "eva@rovet.io",
                 "password": "user123",
                 "full_name": "Eva",
                 "role": UserRole.USER
             },
             {
-                "email": "tsetso@example.com",
+                "email": "tsetso@rovet.io",
                 "password": "user123",
                 "full_name": "Tsetso",
                 "role": UserRole.USER
             },
             {
-                "email": "nick@example.com",
+                "email": "nick@rovet.io",
                 "password": "user123",
                 "full_name": "Nick Bacon",
                 "role": UserRole.USER
             },
             {
-                "email": "rado@example.com",
+                "email": "rado@rovet.io",
                 "password": "user123",
                 "full_name": "Rado",
                 "role": UserRole.USER
             },
             {
-                "email": "kamen@example.com",
+                "email": "kamen@rovet.io",
                 "password": "user123",
                 "full_name": "Kamen",
                 "role": UserRole.USER
             },
             {
-                "email": "mario@example.com",
+                "email": "mario@rovet.io",
                 "password": "user123",
                 "full_name": "Mario",
                 "role": UserRole.USER
