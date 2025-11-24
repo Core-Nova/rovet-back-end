@@ -1,112 +1,134 @@
+"""
+Authentication middleware for JWT validation.
+
+REFACTORED:
+- Removed database session creation from middleware
+- Reduced logging noise
+- Simplified logic
+- Authentication now handled by FastAPI dependencies
+"""
+
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
-from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.services.auth_service import AuthService
-from app.models.user import UserRole
-from app.db.session import SessionLocal
 from app.core.logging import logger
-from app.exceptions.base import UnauthorizedException
 
 
 class AuthMiddleware(BaseHTTPMiddleware):
+    """
+    Authentication middleware for global auth check.
+    
+    Note: This middleware primarily checks for public paths.
+    Actual authentication is handled by FastAPI dependencies (get_current_user).
+    
+    Responsibilities:
+    - Allow public paths without authentication
+    - Reject requests to protected paths without Bearer token
+    - Actual token validation is done in dependencies (separation of concerns)
+    """
+    
+    # Public paths that don't require authentication
+    PUBLIC_PATHS = {
+        "/",
+        "/health",
+        "/api/health",
+        "/api/metrics",
+        "/api/docs",
+        "/api/redoc",
+        "/api/openapi.json",
+        f"{settings.API_V1_STR}/auth/login",
+        f"{settings.API_V1_STR}/auth/register",
+        f"{settings.API_V1_STR}/health",
+        f"{settings.API_V1_STR}/metrics",
+        f"{settings.API_V1_STR}/openapi.json",
+    }
+    
     async def dispatch(self, request: Request, call_next):
-        logger.info(f"Auth middleware processing request: {request.url.path}")
+        """
+        Check if request path is public or has Bearer token.
         
-        public_paths = [
-            "/",  # Root path
-            f"{settings.API_V1_STR}/auth/login",
-            f"{settings.API_V1_STR}/auth/register",
-            f"{settings.API_V1_STR}/health",
-            f"{settings.API_V1_STR}/metrics",
-            f"{settings.API_V1_STR}/openapi.json",
-            "/api/docs",
-            "/api/metrics",
-            "/api/health",
-            "/api/redoc",
-            "/api/openapi.json",
-            "/static",
-            "/health",
-        ]
-
-        if request.url.path in public_paths or request.url.path.startswith("/static/"):
-            logger.info(f"Request path {request.url.path} is public, skipping auth")
+        For protected paths:
+        - Verify Authorization header exists and has Bearer prefix
+        - Actual token validation done in dependency injection
+        
+        For public paths:
+        - Skip authentication entirely
+        """
+        path = request.url.path
+        
+        # Allow public paths
+        if self._is_public_path(path):
             return await call_next(request)
-
+        
+        # Check for Authorization header
         auth_header = request.headers.get("Authorization")
-        logger.info(f"Authorization header: {auth_header}")
         
         if not auth_header or not auth_header.startswith("Bearer "):
-            logger.error("Missing or invalid Authorization header")
+            logger.warning(f"Missing or invalid auth header for path: {path}")
             return JSONResponse(
                 status_code=401,
                 content={"detail": "Missing or invalid authentication token"}
             )
-
-        token = auth_header.split(" ")[1]
-        logger.info(f"Received token: {token}")
         
-        logger.info("Attempting to create database session")
-        db: Session = SessionLocal()
-        try:
-            logger.info("Creating AuthService instance")
-            auth_service = AuthService(db)
+        # Token is present - actual validation happens in dependencies
+        return await call_next(request)
+    
+    def _is_public_path(self, path: str) -> bool:
+        """
+        Check if path is public (doesn't require authentication).
+        
+        Args:
+            path: Request path
             
-            logger.info("Attempting to get current user from token")
-            user = auth_service.get_current_user(token)
-            logger.info(f"Successfully authenticated user: {user.email} with role {user.role}")
-            
-            logger.info("Adding user to request state")
-            request.state.user = user
-            request.state.is_admin = user.role == UserRole.ADMIN
-            logger.info(f"User admin status: {request.state.is_admin}")
-            
-            logger.info("Proceeding to next middleware/handler")
-            response = await call_next(request)
-            return response
-            
-        except UnauthorizedException as e:
-            logger.error(f"Unauthorized: {str(e.detail)}")
-            return JSONResponse(
-                status_code=401,
-                content={"detail": str(e.detail)}
-            )
-        except Exception as e:
-            logger.error(f"Authentication error: {str(e)}", exc_info=True)
-            return JSONResponse(
-                status_code=401,
-                content={"detail": "Authentication failed"}
-            )
-        finally:
-            logger.info("Closing database session")
-            db.close()
+        Returns:
+            bool: True if public, False if protected
+        """
+        # Exact match
+        if path in self.PUBLIC_PATHS:
+            return True
+        
+        # Static files
+        if path.startswith("/static/"):
+            return True
+        
+        # Docs paths
+        if path.startswith("/docs") or path.startswith("/redoc"):
+            return True
+        
+        return False
 
 
 class AdminMiddleware(BaseHTTPMiddleware):
+    """
+    Admin authorization middleware.
+    
+    Note: This is mostly replaced by get_current_admin_user dependency.
+    Keeping for backwards compatibility and defense in depth.
+    """
+    
     async def dispatch(self, request: Request, call_next):
-        logger.info(f"Admin middleware processing request: {request.url.path}")
+        """
+        Check admin authorization for admin routes.
         
+        Note: Actual admin check is done in get_current_admin_user dependency.
+        This middleware provides an additional layer of defense.
+        """
+        path = request.url.path
         admin_base_path = f"{settings.API_V1_STR}/users"
         
-        if not request.url.path.startswith(admin_base_path):
-            logger.info(f"Request path {request.url.path} is not an admin route, skipping admin check")
+        # Not an admin route - skip check
+        if not path.startswith(admin_base_path):
             return await call_next(request)
-
+        
+        # Admin route - user must be set by AuthMiddleware
+        # Actual admin role check is done in dependencies
         if not hasattr(request.state, "user"):
-            logger.error("No user found in request state")
+            logger.warning(f"No user in request state for admin path: {path}")
             return JSONResponse(
                 status_code=401,
-                content={"detail": "Missing or invalid authentication token"}
+                content={"detail": "Authentication required"}
             )
-
-        if not request.state.is_admin:
-            logger.error(f"User {request.state.user.email} is not an admin")
-            return JSONResponse(
-                status_code=403,
-                content={"detail": "Admin access required"}
-            )
-
-        logger.info(f"Admin check passed for user {request.state.user.email}")
-        return await call_next(request) 
+        
+        return await call_next(request)

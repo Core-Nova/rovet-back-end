@@ -6,4 +6,8 @@ client = TestClient(app)
 def test_read_main():
     response = client.get("/")
     assert response.status_code == 200
-    assert response.json() == {"status": "healthy", "version": "1.0.0"} 
+    data = response.json()
+    assert data["status"] == "ok"
+    assert data["message"] == "Rovet Backend API"
+    assert data["version"] == "1.0.0"
+    assert data["docs"] == "/api/docs" 
