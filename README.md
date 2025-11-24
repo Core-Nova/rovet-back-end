@@ -283,11 +283,271 @@ curl http://localhost:8001/api/v1/users?page=2&size=20 \
 
 ## Development
 
+> 📚 **Quick Links:**
+> - [Testing Guide](docs/TESTING_GUIDE.md) - Comprehensive testing documentation
+> - [Quick Reference](docs/QUICK_REFERENCE.md) - One-page command reference
+> - [DI Proposal](docs/PROPOSAL_DEPENDENCY_INJECTION.md) - Architecture improvement proposal
+
+### Running the Service
+
+#### Start All Services (Development)
+```bash
+# Build and start all containers (API + Database)
+docker-compose up -d
+
+# Or use the Makefile
+make up
+
+# View logs
+docker-compose logs -f api
+make logs
+```
+
+#### Access the Application
+- **API Docs**: http://localhost:8001/api/docs
+- **Health Check**: http://localhost:8001/
+- **Metrics**: http://localhost:8001/api/metrics
+
+#### Stop Services
+```bash
+docker-compose down
+# Or
+make down
+```
+
 ### Running Tests
 
-Inside the Docker container:
+#### Quick Test Run (Recommended)
 ```bash
+# Run all tests with coverage using Make
+make test
+
+# Or using docker-compose directly
+docker-compose exec api poetry run pytest
+```
+
+#### Comprehensive Test with Coverage Report
+```bash
+# Run tests with detailed coverage in terminal + HTML report
+docker-compose exec api poetry run pytest --cov=app --cov-report=term-missing --cov-report=html
+
+# Using Make (already includes coverage)
+make test
+```
+
+#### Test Output Explained
+The test output will show:
+- ✅ **Pass/Fail Status**: Each test result
+- 📊 **Coverage Summary**: Percentage of code covered by tests
+- 📝 **Missing Lines**: Lines not covered by tests (with `--cov-report=term-missing`)
+- 📄 **HTML Report**: Detailed interactive coverage report in `htmlcov/index.html`
+
+#### View Coverage Report (HTML)
+```bash
+# After running tests, open the HTML coverage report
+open htmlcov/index.html          # macOS
+xdg-open htmlcov/index.html      # Linux
+start htmlcov/index.html         # Windows
+```
+
+The HTML report provides:
+- File-by-file coverage breakdown
+- Line-by-line highlighting of covered/uncovered code
+- Branch coverage analysis
+- Interactive navigation
+
+#### Run Specific Tests
+```bash
+# Run tests in a specific file
+docker-compose exec api poetry run pytest app/tests/api/v1/test_auth.py
+
+# Run a specific test function
+docker-compose exec api poetry run pytest app/tests/api/v1/test_auth.py::test_login_success
+
+# Run tests matching a pattern
+docker-compose exec api poetry run pytest -k "auth"
+
+# Run tests with verbose output
+docker-compose exec api poetry run pytest -v
+
+# Run tests and stop on first failure
+docker-compose exec api poetry run pytest -x
+```
+
+#### Run Tests Locally (Without Docker)
+If you have Python installed locally:
+
+```bash
+# Install dependencies
+poetry install
+
+# Activate virtual environment
+poetry shell
+
+# Run tests
 pytest
+
+# Run with coverage
+pytest --cov=app --cov-report=term-missing --cov-report=html
+```
+
+#### Test Coverage Goals
+- **Minimum Target**: 80% coverage
+- **Current Coverage**: Run `make test` to see current coverage
+- **Excluded from Coverage**: 
+  - Test files (`app/tests/*`)
+  - Migration files (`app/migrations/*`)
+  - Main entry point boilerplate
+
+#### Continuous Testing During Development
+```bash
+# Watch mode - re-run tests on file changes (requires pytest-watch)
+docker-compose exec api poetry run ptw app/tests
+
+# Or run tests in a loop
+while true; do make test; sleep 5; done
+```
+
+### Code Quality
+
+#### Linting
+```bash
+# Run all linting checks
+make lint
+
+# Individual tools
+docker-compose exec api poetry run flake8 app
+docker-compose exec api poetry run black --check app
+docker-compose exec api poetry run isort --check-only app
+```
+
+#### Auto-Format Code
+```bash
+# Format all code using black and isort
+make format
+
+# Or manually
+docker-compose exec api poetry run black app
+docker-compose exec api poetry run isort app
+```
+
+### Database Operations
+
+#### Run Migrations
+```bash
+# Apply all pending migrations
+make migrate
+
+# Or using docker-compose
+docker-compose exec api poetry run alembic upgrade head
+
+# Create new migration
+docker-compose exec api poetry run alembic revision --autogenerate -m "description"
+
+# Rollback last migration
+docker-compose exec api poetry run alembic downgrade -1
+```
+
+#### Seed Database
+```bash
+# Seed with initial users
+make seed
+
+# Or using docker-compose
+docker-compose exec api poetry run python -m app.scripts.seed_db
+```
+
+### Development Workflow
+
+#### Typical Development Session
+```bash
+# 1. Start services
+make up
+
+# 2. Run migrations
+make migrate
+
+# 3. Seed database (first time only)
+make seed
+
+# 4. Make code changes...
+
+# 5. Run tests to verify changes
+make test
+
+# 6. Format code
+make format
+
+# 7. Run linting
+make lint
+
+# 8. View coverage report
+open htmlcov/index.html
+
+# 9. Commit changes
+git add .
+git commit -m "Your message"
+```
+
+#### Quick Reference - Make Commands
+```bash
+make help       # Show all available commands
+make build      # Build Docker containers
+make up         # Start all services
+make down       # Stop all services
+make logs       # View logs
+make ps         # List running containers
+make test       # Run tests with coverage
+make lint       # Run linting checks
+make format     # Auto-format code
+make migrate    # Run database migrations
+make seed       # Seed database
+make shell      # Open shell in API container
+make restart    # Restart all containers
+make clean      # Remove all containers and volumes (⚠️ deletes data)
+```
+
+### Debugging
+
+#### Access Container Shell
+```bash
+# Open shell in API container
+make shell
+
+# Or using docker-compose
+docker-compose exec api sh
+
+# Inside container, you can:
+# - Run Python commands: python
+# - Check environment: env
+# - View files: ls -la
+# - Run any command: pytest, alembic, etc.
+```
+
+#### Interactive Python Shell (REPL)
+```bash
+# Open Python shell with app context
+docker-compose exec api python
+
+# Inside Python shell:
+>>> from app.models.user import User
+>>> from app.db.session import SessionLocal
+>>> db = SessionLocal()
+>>> users = db.query(User).all()
+>>> print(users)
+```
+
+#### View Real-Time Logs
+```bash
+# All services
+docker-compose logs -f
+
+# Specific service
+docker-compose logs -f api
+docker-compose logs -f db
+
+# Last 100 lines
+docker-compose logs --tail=100 api
 ```
 
 ### Run locally without Docker (venv + pip) and use Docker DB
@@ -352,29 +612,21 @@ The application includes built-in Prometheus metrics at `/api/metrics`:
 - Database query metrics
 - Custom application metrics
 
-Access metrics in Prometheus format:
+#### Access Metrics
 ```bash
+# View metrics in Prometheus format
 curl http://localhost:8001/api/metrics
+
+# Or open in browser
+open http://localhost:8001/api/metrics
 ```
 
-### Common Docker Commands
-
-```bash
-# View logs
-docker-compose logs -f
-
-# Restart services
-docker-compose restart
-
-# Stop services
-docker-compose down
-
-# Rebuild and start services
-docker-compose up -d --build
-
-# Remove all containers and volumes (WARNING: This will delete all data)
-docker-compose down -v
-```
+#### Key Metrics Available
+- `http_requests_total` - Total HTTP requests by method, endpoint, and status
+- `http_request_duration_seconds` - Request duration histograms
+- `login_attempts_total` - Login attempts by result (success/failure)
+- `user_registrations_total` - Total user registrations
+- `active_db_connections` - Current database connection pool status
 
 ### Troubleshooting
 
@@ -411,18 +663,39 @@ docker-compose down -v
 
 ### Code Structure
 
+> 📖 **See [Architecture Documentation](docs/ARCHITECTURE.md) for detailed explanation**
+
 ```
 app/
-├── api/            # API routes and endpoints
-├── core/           # Core functionality and config
-├── db/             # Database models and session
-├── middleware/     # Custom middleware
-├── models/         # Pydantic models and schemas
-├── repositories/   # Database operations
+├── api/            # HTTP endpoints (controllers)
+│   ├── deps.py     # Dependency injection providers
+│   └── v1/         # API version 1 endpoints
+├── services/       # Business logic layer
+├── repositories/   # Data access layer
+├── models/         # Database models (SQLAlchemy)
+├── schemas/        # Pydantic schemas (internal)
+├── dto/            # Data Transfer Objects (API contracts)
+├── middleware/     # Custom middleware (auth, logging, metrics)
+├── core/           # Core configuration and utilities
+├── db/             # Database session and configuration
+├── exceptions/     # Custom exceptions
 ├── scripts/        # Utility scripts
-├── services/       # Business logic
 └── tests/          # Test suite
 ```
+
+**Layer Architecture:**
+- **Controllers** (`app/api/`) → Handle HTTP requests/responses
+- **Services** (`app/services/`) → Business logic & orchestration  
+- **Repositories** (`app/repositories/`) → Database queries
+- **Models** (`app/models/`) → Database schema
+
+**Design Principles:**
+- ✅ **SOLID principles** - Single responsibility, dependency injection
+- ✅ **Separation of concerns** - Clear layer boundaries
+- ✅ **Test-friendly structure** - Easy to mock and test
+- ✅ **Type safety** - Strict type hints throughout
+
+See [`.cursor/00-project-guidelines.mdc`](.cursor/00-project-guidelines.mdc) for detailed development guidelines.
 
 ## Security
 

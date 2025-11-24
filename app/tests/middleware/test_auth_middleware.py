@@ -99,7 +99,7 @@ def test_admin_path_with_admin_user(client: TestClient, mock_auth_service):
 
     with patch("app.middleware.auth_middleware.AuthService", return_value=mock_auth_service), \
          patch("app.services.auth_service.jwt.decode") as mock_decode, \
-         patch("app.api.deps.AuthService", return_value=mock_auth_service):
+         patch("app.api.dependencies.services.AuthService", return_value=mock_auth_service):
             mock_decode.return_value = {"sub": "1", "role": UserRole.ADMIN.value}
             headers = {"Authorization": f"Bearer {ADMIN_TOKEN}"}
             response = client.get(f"{settings.API_V1_STR}/users/", headers=headers)

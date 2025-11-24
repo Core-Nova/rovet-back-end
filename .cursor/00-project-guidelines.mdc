@@ -36,6 +36,305 @@ When responding:
 - **Document endpoints with OpenAPI** (FastAPI auto) and `docstrings`.
 - **Stick to async** for I/O (DB, Redis, HTTP).
 
+## 🚨 CRITICAL RULES - NEVER SKIP
+
+### Rule 1: Always Check Documentation First
+
+**BEFORE making ANY code change:**
+1. **Check if documentation exists** in `docs/` directory
+2. **Read relevant documentation** to understand:
+   - Current architecture patterns
+   - Existing conventions
+   - Design decisions
+   - Anti-patterns to avoid
+3. **Follow documented patterns** - Don't reinvent solutions
+4. **Update documentation** if your changes affect it
+
+**Documentation Files to Check:**
+- `docs/ARCHITECTURE.md` - System architecture
+- `docs/TESTING_*.md` - Testing patterns
+- `docs/API_STRUCTURE_DIAGRAM.md` - API layer design
+- `docs/QUICK_REFERENCE.md` - Common patterns
+- Any feature-specific docs
+
+**Example Workflow:**
+```
+User asks: "Add password reset feature"
+✅ CORRECT:
+1. Check docs/ for auth patterns
+2. Check existing auth endpoints structure
+3. Follow established patterns
+4. Implement feature
+5. Update docs with new endpoint
+
+❌ WRONG:
+1. Implement immediately without checking docs
+2. Use different patterns than rest of codebase
+3. Don't update documentation
+```
+
+### Rule 2: Always Update Tests When Changing Code
+
+**EVERY code change MUST include corresponding test updates:**
+
+**When adding new functionality:**
+- ✅ Write tests BEFORE or ALONGSIDE implementation (TDD)
+- ✅ Cover happy path + edge cases + error cases
+- ✅ Ensure minimum 80% coverage for new code
+
+**When modifying existing code:**
+- ✅ Update tests to reflect new behavior
+- ✅ Add tests for new branches/conditions
+- ✅ Verify all existing tests still pass
+- ✅ Check coverage didn't decrease
+
+**When refactoring:**
+- ✅ Ensure tests pass before refactoring
+- ✅ Keep tests passing during refactoring
+- ✅ Update test structure if needed
+- ✅ Verify coverage maintained or improved
+
+**When fixing bugs:**
+- ✅ Write test that reproduces the bug FIRST
+- ✅ Verify test fails
+- ✅ Fix bug
+- ✅ Verify test now passes
+- ✅ Add related edge case tests
+
+**Types of Tests to Consider:**
+1. **Unit Tests** - Test individual functions/methods in isolation
+2. **Integration Tests** - Test component interactions (service + repository)
+3. **API Tests** - Test HTTP endpoints end-to-end
+4. **Edge Case Tests** - Test boundary conditions and error paths
+
+**Example - Adding a New Method:**
+```python
+# ❌ WRONG - Just adding code without tests
+class UserService:
+    def deactivate_user(self, user_id: int) -> User:
+        user = self.repository.get(user_id)
+        user.is_active = False
+        self.repository.commit()
+        return user
+
+# ✅ CORRECT - Add tests with the code
+# In app/tests/services/test_user_service.py
+
+def test_deactivate_user_with_valid_id_deactivates_user(mock_user_repository):
+    # Arrange
+    mock_user = create_mock_user(id=1, is_active=True)
+    mock_user_repository.get.return_value = mock_user
+    service = UserService(mock_user_repository)
+    
+    # Act
+    result = service.deactivate_user(1)
+    
+    # Assert
+    assert result.is_active is False
+    mock_user_repository.commit.assert_called_once()
+
+def test_deactivate_user_with_invalid_id_raises_not_found(mock_user_repository):
+    # Arrange
+    mock_user_repository.get.return_value = None
+    service = UserService(mock_user_repository)
+    
+    # Act & Assert
+    with pytest.raises(NotFoundException):
+        service.deactivate_user(999)
+```
+
+**Example - Modifying Existing Code:**
+```python
+# Changing UserService.update_user() to add email validation
+
+# 1. Update implementation
+class UserService:
+    def update_user(self, user_id: int, update_data: UserUpdate) -> User:
+        # Added email uniqueness check
+        if update_data.email:
+            existing = self.repository.get_by_email(update_data.email)
+            if existing and existing.id != user_id:
+                raise ConflictException("Email already in use")
+        # ... rest of code
+
+# 2. Add new tests
+def test_update_user_with_duplicate_email_raises_conflict():
+    # Test the new validation
+    ...
+
+# 3. Update existing tests if behavior changed
+def test_update_user_with_valid_data_succeeds():
+    # Ensure existing test still works
+    ...
+```
+
+**Files to Update:**
+- Implementation: `app/services/user_service.py`
+- Unit tests: `app/tests/services/test_user_service.py`
+- Integration tests: `app/tests/integration/test_user_service_integration.py` (if applicable)
+- API tests: `app/tests/api/v1/test_users.py` (if endpoint affected)
+
+**Verification Checklist:**
+- [ ] All existing tests pass
+- [ ] New tests cover new functionality
+- [ ] Coverage maintained or increased
+- [ ] Tests follow AAA pattern (Arrange, Act, Assert)
+- [ ] Tests are independent and isolated
+- [ ] Both happy and sad paths tested
+
+**Running Tests:**
+```bash
+# Run all tests with coverage
+make test
+
+# Or with Docker
+docker-compose exec api poetry run pytest --cov=app --cov-report=term-missing -v
+```
+
+**❌ NEVER:**
+- Change code without updating tests
+- Skip tests "to save time" - they save MORE time later
+- Leave broken tests
+- Commit code with failing tests
+- Reduce test coverage
+
+**✅ ALWAYS:**
+- Write or update tests with code changes
+- Run tests before committing
+- Maintain or improve coverage
+- Test edge cases and error paths
+- Keep tests clean and maintainable
+
+## SOLID Principles & Code Design
+
+Always follow **SOLID principles** for maintainable, testable code:
+
+**S - Single Responsibility Principle:**
+- Each class/function should have ONE reason to change
+- Services handle business logic, repositories handle data access, controllers handle HTTP
+- ✅ `UserService.create_user()` - handles user creation logic
+- ❌ `UserService.create_user_and_send_email_and_log()` - too many responsibilities
+
+**O - Open/Closed Principle:**
+- Open for extension, closed for modification
+- Use dependency injection to allow behavior changes without modifying code
+- ✅ Inject different `PasswordService` implementations
+- ❌ Modify `UserService` code for every password strategy
+
+**L - Liskov Substitution Principle:**
+- Subtypes must be substitutable for their base types
+- If `UserRepository` is expected, any implementation should work
+- ✅ `MockUserRepository` can replace `UserRepository` in tests
+- ❌ Mock that changes behavior unexpectedly
+
+**I - Interface Segregation Principle:**
+- Don't force clients to depend on methods they don't use
+- Keep interfaces/protocols focused and minimal
+- ✅ `IUserReader` separate from `IUserWriter`
+- ❌ Single `IUserRepository` with 50 methods
+
+**D - Dependency Inversion Principle:**
+- Depend on abstractions, not concretions
+- High-level modules shouldn't depend on low-level modules
+- ✅ `UserService(repository: UserRepository)` - depends on abstraction
+- ❌ `UserService(db: Session)` creating its own `UserRepository` - depends on concrete implementation
+
+## Separation of Concerns
+
+**Layer Architecture:**
+```
+Controllers (HTTP Layer)
+    ↓ depends on
+Services (Business Logic Layer)
+    ↓ depends on
+Repositories (Data Access Layer)
+    ↓ depends on
+Models (Database Layer)
+```
+
+**What goes where:**
+- **Controllers/Routers** (`app/api/`): HTTP request/response, routing, validation
+- **Services** (`app/services/`): Business logic, orchestration, domain rules
+- **Repositories** (`app/repositories/`): Database queries, data persistence
+- **Models** (`app/models/`): Database schema, ORM models
+- **DTOs** (`app/dto/`): Data transfer objects, request/response schemas
+- **Middleware** (`app/middleware/`): Cross-cutting concerns (auth, logging, metrics)
+
+**Rules:**
+- Controllers NEVER access database directly - use services
+- Services NEVER construct SQL - use repositories
+- Repositories NEVER contain business logic - just data access
+- Models are JUST data structure - no business logic
+
+## Test-Friendly Code Structure
+
+**Always write code with testability in mind:**
+
+1. **Use Dependency Injection:**
+```python
+# ✅ Testable - can inject mocks
+class UserService:
+    def __init__(self, repository: UserRepository, password_service: PasswordService):
+        self.repository = repository
+        self.password_service = password_service
+
+# ❌ Not testable - creates own dependencies
+class UserService:
+    def __init__(self, db: Session):
+        self.repository = UserRepository(db)
+        self.password_service = PasswordService()
+```
+
+2. **Avoid Global State:**
+```python
+# ✅ Good - no global state
+def process_user(user: User, config: Config) -> Result:
+    ...
+
+# ❌ Bad - global state
+CURRENT_USER = None  # Global variable
+def process_user():
+    global CURRENT_USER
+    ...
+```
+
+3. **Keep Functions Pure When Possible:**
+```python
+# ✅ Pure function - easy to test
+def calculate_discount(price: Decimal, discount_rate: Decimal) -> Decimal:
+    return price * discount_rate
+
+# ❌ Impure function - hard to test
+def calculate_discount(user_id: int) -> Decimal:
+    user = db.query(User).get(user_id)  # Side effect
+    return user.cart_total * get_discount_rate()  # Hidden dependency
+```
+
+4. **Make Dependencies Explicit:**
+```python
+# ✅ Explicit dependencies
+def send_welcome_email(user: User, email_service: EmailService) -> None:
+    email_service.send(user.email, "Welcome!")
+
+# ❌ Hidden dependencies
+def send_welcome_email(user: User) -> None:
+    smtp.send(user.email, "Welcome!")  # Where does smtp come from?
+```
+
+5. **Avoid Static Methods/Class Methods for Business Logic:**
+```python
+# ✅ Instance method - can mock
+class UserService:
+    def create_user(self, data: UserCreate) -> User:
+        ...
+
+# ❌ Static method - harder to mock
+class UserService:
+    @staticmethod
+    def create_user(data: UserCreate) -> User:
+        ...
+```
+
 Observability:
 - **Tracing:** Use OpenTelemetry SDK from `shared/observability/opentelemetry_config.py`. Export with **OTLP** to Google Cloud (Cloud Trace) or collector. Prefer **BatchSpanProcessor**. :contentReference[oaicite:0]{index=0}
 - **Metrics:** Expose `/metrics` using `prometheus-fastapi-instrumentator`. For Cloud Run, use **Managed Service for Prometheus** or the **Prometheus sidecar** to scrape. :contentReference[oaicite:1]{index=1}
@@ -76,6 +375,9 @@ Instrumentation:
 Tests:
 - **pytest** with **httpx TestClient** for API tests, factory fixtures for DB/Redis, and coverage. :contentReference[oaicite:3]{index=3}
 - Unit tests next to code or under `tests/`. Providers and L2 tests must be covered.
+- **Test-Driven Development (TDD):** Write tests first, then implement features
+- **Coverage target:** ≥80% overall, ≥90% for services
+- **See `.cursor/01-testing-rules.mdc`** for comprehensive testing best practices
 
 Dev & Local:
 - `docker-compose.yml` for Postgres + Redis + app.
@@ -92,4 +394,49 @@ Healthchecks:
 Security & Config:
 - No secrets in code. Pull from env or **Secret Manager** at start.
 - Enforce CORS, rate limits (if needed), and request size limits.
+
+## File and Folder Structure
+
+For a comprehensive explanation of the project structure, see **`docs/ARCHITECTURE.md`**.
+
+**Quick Overview:**
+
+```
+rovet-back-end/
+├── app/
+│   ├── api/              # HTTP endpoints (controllers)
+│   │   ├── deps.py       # Dependency injection providers
+│   │   └── v1/endpoints/ # API v1 endpoint handlers
+│   ├── services/         # Business logic layer
+│   ├── repositories/     # Data access layer
+│   ├── models/           # Database models (SQLAlchemy)
+│   ├── schemas/          # Pydantic schemas (internal)
+│   ├── dto/              # Data Transfer Objects (API contracts)
+│   ├── middleware/       # Custom middleware
+│   ├── core/             # Configuration & utilities
+│   ├── db/               # Database session & config
+│   ├── exceptions/       # Custom exceptions
+│   └── tests/            # Test suite
+├── alembic/              # Database migrations
+├── docs/                 # Documentation
+├── scripts/              # Deployment scripts
+└── Makefile              # Development commands
+```
+
+**Layer Architecture:**
+```
+Controllers (app/api/)           → Handle HTTP requests/responses
+    ↓
+Services (app/services/)         → Business logic & orchestration
+    ↓
+Repositories (app/repositories/) → Database queries
+    ↓
+Models (app/models/)             → Database schema
+```
+
+**Rules:**
+- Controllers NEVER query database directly → use services
+- Services NEVER write SQL → use repositories
+- Repositories NEVER contain business logic → just data access
+- Models are ONLY data structures → no methods
 

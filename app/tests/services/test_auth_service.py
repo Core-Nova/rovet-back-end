@@ -15,14 +15,14 @@ logger = logging.getLogger(__name__)
 VALID_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwicm9sZSI6InVzZXIifQ.4Adcj3UFYzPUVaVF43FmMze6x7Yp4Yh4j3YwqXh5Yw"
 
 
-def test_create_access_token(mock_db):
+def test_create_access_token(mock_user_service):
     mock_user = MagicMock(
         id=1,
         email="test@example.com",
         role=UserRole.USER,
         is_active=True
     )
-    auth_service = AuthService(mock_db)
+    auth_service = AuthService(mock_user_service)
     
     token = auth_service.create_access_token(mock_user)
     payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
@@ -32,8 +32,8 @@ def test_create_access_token(mock_db):
     assert "exp" in payload
 
 
-def test_verify_token(mock_db):
-    auth_service = AuthService(mock_db)
+def test_verify_token(mock_user_service):
+    auth_service = AuthService(mock_user_service)
     
     with patch("app.services.auth_service.jwt.decode") as mock_decode:
         mock_decode.return_value = {"sub": "1", "role": "user"}
@@ -43,8 +43,8 @@ def test_verify_token(mock_db):
         logger.info("Token verification test passed")
 
 
-def test_verify_token_invalid(mock_db):
-    auth_service = AuthService(mock_db)
+def test_verify_token_invalid(mock_user_service):
+    auth_service = AuthService(mock_user_service)
     
     with patch("app.services.auth_service.jwt.decode") as mock_decode:
         mock_decode.side_effect = JWTError("Not enough segment")

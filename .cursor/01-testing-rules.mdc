@@ -1,0 +1,458 @@
+---
+description: >
+  Testing best practices and rules for the Rovet backend project.
+  These rules ensure high-quality, maintainable tests with proper coverage.
+globs:
+  - "app/tests/**/*"
+  - "app/**/*.py"
+alwaysApply: true
+---
+---
+name: Testing Best Practices
+---
+
+## Core Testing Principles
+
+You are a testing expert following **Test-Driven Development (TDD)** and **behavior-driven** testing patterns.
+
+### When Asked to Run Tests
+
+1. **Always run tests with coverage:**
+   ```bash
+   docker-compose exec api poetry run pytest --cov=app --cov-report=term-missing --cov-report=html -v
+   ```
+
+2. **Check coverage report after running tests:**
+   - Terminal shows overall coverage percentage
+   - HTML report (`htmlcov/index.html`) shows line-by-line coverage
+   - Identify uncovered lines and suggest tests
+
+3. **Report results clearly:**
+   - Number of tests passed/failed
+   - Coverage percentage (target: ≥80%)
+   - List any failing tests with clear explanations
+   - Highlight files with low coverage (<80%)
+
+### Test Structure and Organization
+
+**Test File Naming:**
+- Unit tests: `test_<module_name>.py` (e.g., `test_user_service.py`)
+- Integration tests: `test_<feature>_integration.py`
+- API tests: `test_<endpoint_name>.py` (e.g., `test_auth.py`)
+
+**Test Function Naming:**
+- Use descriptive names: `test_<action>_<condition>_<expected_result>`
+- ✅ Good: `test_login_with_valid_credentials_returns_token`
+- ✅ Good: `test_create_user_with_existing_email_raises_conflict`
+- ❌ Bad: `test_login`, `test_1`, `test_user`
+
+**Test Organization:**
+```
+app/tests/
+├── conftest.py              # Shared fixtures
+├── utils.py                 # Test utilities
+├── unit/                    # Pure unit tests (no I/O)
+│   ├── services/
+│   ├── repositories/
+│   └── utils/
+├── integration/             # Integration tests (DB, external services)
+│   ├── services/
+│   └── repositories/
+└── api/                     # API endpoint tests
+    └── v1/
+        ├── test_auth.py
+        └── test_users.py
+```
+
+### Writing Quality Tests
+
+**1. Arrange-Act-Assert (AAA) Pattern:**
+```python
+def test_create_user_with_valid_data_returns_user():
+    # Arrange
+    user_data = UserCreate(
+        email="test@example.com",
+        password="SecurePass123!",
+        full_name="Test User"
+    )
+    mock_repo = MagicMock()
+    mock_repo.get_by_email.return_value = None
+    
+    # Act
+    service = UserService(mock_repo, PasswordService())
+    result = service.create_user(user_data)
+    
+    # Assert
+    assert result.email == "test@example.com"
+    assert result.full_name == "Test User"
+    mock_repo.create_with_password.assert_called_once()
+```
+
+**2. Test One Thing Per Test:**
+```python
+# ✅ Good - tests one behavior
+def test_login_with_invalid_password_raises_unauthorized():
+    ...
+
+def test_login_with_inactive_user_raises_unauthorized():
+    ...
+
+# ❌ Bad - tests multiple behaviors
+def test_login_edge_cases():
+    # tests invalid password, inactive user, missing email, etc.
+    ...
+```
+
+**3. Use Fixtures for Common Setup:**
+```python
+@pytest.fixture
+def user_service(mock_user_repository, mock_password_service):
+    """Provide UserService with mocked dependencies."""
+    return UserService(mock_user_repository, mock_password_service)
+
+def test_create_user(user_service):
+    # No setup needed, fixture provides ready-to-use service
+    result = user_service.create_user(user_data)
+    assert result is not None
+```
+
+**4. Mock External Dependencies:**
+```python
+# ✅ Good - mocks database
+def test_get_user_by_email(mock_user_repository):
+    mock_user_repository.get_by_email.return_value = create_user_mock()
+    service = UserService(mock_user_repository)
+    result = service.get_by_email("test@example.com")
+    assert result.email == "test@example.com"
+
+# ❌ Bad - uses real database in unit test
+def test_get_user_by_email(db):
+    service = UserService(UserRepository(db))
+    result = service.get_by_email("test@example.com")
+    ...
+```
+
+**5. Test Both Happy and Sad Paths:**
+```python
+# Happy path
+def test_authenticate_with_valid_credentials_returns_user():
+    ...
+
+# Sad paths
+def test_authenticate_with_invalid_email_returns_none():
+    ...
+
+def test_authenticate_with_wrong_password_returns_none():
+    ...
+
+def test_authenticate_with_inactive_user_raises_exception():
+    ...
+```
+
+### Dependency Injection for Testability
+
+**Always use constructor injection for dependencies:**
+
+```python
+# ✅ Good - dependencies injected, easy to test
+class UserService:
+    def __init__(
+        self,
+        repository: UserRepository,
+        password_service: PasswordService
+    ):
+        self.repository = repository
+        self.password_service = password_service
+
+# Test is easy
+def test_create_user():
+    mock_repo = MagicMock(spec=UserRepository)
+    mock_password = MagicMock(spec=PasswordService)
+    service = UserService(mock_repo, mock_password)
+    # Test in isolation
+
+# ❌ Bad - creates own dependencies, hard to test
+class UserService:
+    def __init__(self, db: Session):
+        self.repository = UserRepository(db)  # Can't mock!
+        self.password_service = PasswordService()  # Can't mock!
+```
+
+### FastAPI Testing Patterns
+
+**1. Use Dependency Overrides:**
+```python
+def test_endpoint_with_mocked_service(client):
+    # Arrange
+    mock_service = MagicMock(spec=UserService)
+    mock_service.get_all.return_value = [mock_user]
+    
+    # Override dependency
+    app.dependency_overrides[get_user_service] = lambda: mock_service
+    
+    # Act
+    response = client.get("/api/v1/users/")
+    
+    # Assert
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+    
+    # Cleanup
+    app.dependency_overrides.clear()
+```
+
+**2. Test Status Codes and Response Structure:**
+```python
+def test_login_success_returns_token(client):
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"email": "admin@example.com", "password": "admin123"}
+    )
+    
+    assert response.status_code == 200
+    data = response.json()
+    assert "access_token" in data
+    assert data["token_type"] == "bearer"
+    assert isinstance(data["access_token"], str)
+```
+
+**3. Test Authentication and Authorization:**
+```python
+def test_protected_endpoint_without_token_returns_401(client):
+    response = client.get("/api/v1/users/")
+    assert response.status_code == 401
+
+def test_admin_endpoint_with_user_token_returns_403(client, user_token):
+    response = client.get(
+        "/api/v1/users/",
+        headers={"Authorization": f"Bearer {user_token}"}
+    )
+    assert response.status_code == 403
+```
+
+### Coverage Requirements
+
+**Minimum Coverage Targets:**
+- Overall project: ≥80%
+- Services: ≥90%
+- API endpoints: ≥85%
+- Repositories: ≥90%
+- Utilities: ≥85%
+
+**Files Excluded from Coverage:**
+- Test files (`app/tests/*`)
+- Migration files (`alembic/versions/*`)
+- Scripts (`app/scripts/*`)
+- `__init__.py` files
+- Main entry points
+
+**When Coverage is Low:**
+1. Check HTML report: `open htmlcov/index.html`
+2. Identify red-highlighted (uncovered) lines
+3. Write tests for:
+   - Error handling paths
+   - Edge cases
+   - Branch conditions
+4. Re-run tests and verify coverage improved
+
+### Testing Anti-Patterns to Avoid
+
+**❌ Don't:**
+1. **Test implementation details** - Test behavior, not internal methods
+2. **Write dependent tests** - Each test should run independently
+3. **Use real external services** - Mock APIs, databases, file systems
+4. **Ignore flaky tests** - Fix or remove them
+5. **Skip assertions** - Every test must verify something
+6. **Test third-party code** - Trust it works, mock it
+7. **Write slow tests** - Keep unit tests fast (<100ms each)
+8. **Use sleep() for timing** - Use proper async/await or mocking
+9. **Hard-code test data** - Use factories or fixtures
+10. **Leave commented-out tests** - Remove or fix them
+
+**✅ Do:**
+1. **Test behavior** - What the function should do, not how
+2. **Keep tests isolated** - No shared state between tests
+3. **Mock external dependencies** - Database, APIs, file system
+4. **Fix flaky tests immediately** - Flakiness indicates poor design
+5. **Assert expected outcomes** - Be specific about what should happen
+6. **Trust and mock libraries** - Don't test FastAPI, SQLAlchemy, etc.
+7. **Write fast unit tests** - Mock I/O operations
+8. **Use proper async testing** - pytest-asyncio for async code
+9. **Use test factories** - Generate test data dynamically
+10. **Delete broken tests** - If can't fix quickly, remove and re-add later
+
+### Pytest Best Practices
+
+**Use Fixtures:**
+```python
+@pytest.fixture
+def mock_user_repository():
+    repo = MagicMock(spec=UserRepository)
+    repo.get_by_email.return_value = None
+    return repo
+
+@pytest.fixture
+def user_service(mock_user_repository):
+    return UserService(mock_user_repository, PasswordService())
+```
+
+**Use Parametrize for Similar Tests:**
+```python
+@pytest.mark.parametrize("email,expected", [
+    ("valid@example.com", True),
+    ("invalid", False),
+    ("", False),
+    (None, False),
+])
+def test_email_validation(email, expected):
+    result = validate_email(email)
+    assert result == expected
+```
+
+**Use Markers for Test Categories:**
+```python
+@pytest.mark.slow
+def test_bulk_user_import():
+    ...
+
+@pytest.mark.integration
+def test_database_transaction():
+    ...
+
+# Run only unit tests
+# pytest -m "not slow and not integration"
+```
+
+**Use Context Managers for Cleanup:**
+```python
+@pytest.fixture
+def temp_user(db):
+    user = create_test_user(db)
+    yield user
+    # Cleanup happens automatically
+    db.delete(user)
+    db.commit()
+```
+
+### When Writing New Code
+
+**Before implementing a feature:**
+1. Write the test first (TDD approach)
+2. Run test - it should fail (red)
+3. Implement minimal code to pass test (green)
+4. Refactor while keeping tests passing (refactor)
+5. Check coverage increased
+
+**When fixing a bug:**
+1. Write a test that reproduces the bug
+2. Verify test fails
+3. Fix the bug
+4. Verify test passes
+5. Check edge cases are covered
+
+**When refactoring:**
+1. Ensure good test coverage exists
+2. Run tests before refactoring
+3. Make small changes
+4. Run tests after each change
+5. If tests fail, revert and try again
+
+### Test Reporting
+
+**When asked to run tests, always provide:**
+1. **Command executed:**
+   ```
+   Running: docker-compose exec api poetry run pytest -v --cov=app --cov-report=term-missing
+   ```
+
+2. **Test Results:**
+   ```
+   ✅ 37 passed, 0 failed
+   ⏱️  Duration: 2.34s
+   ```
+
+3. **Coverage Summary:**
+   ```
+   Coverage: 93% (target: ≥80%)
+   
+   Files below 80%:
+   - app/api/deps.py: 75% (missing lines: 45-47, 52)
+   ```
+
+4. **Next Steps:**
+   ```
+   Suggestions:
+   - Add tests for error handling in deps.py lines 45-47
+   - Test authentication edge cases
+   - View detailed report: open htmlcov/index.html
+   ```
+
+### Integration with CI/CD
+
+Tests should:
+- Run automatically on PR creation
+- Block merge if tests fail
+- Block merge if coverage drops below threshold
+- Generate coverage reports
+- Run linting and type checking
+
+**Commands for CI:**
+```bash
+# Install dependencies
+poetry install
+
+# Run tests with coverage
+poetry run pytest --cov=app --cov-report=xml --cov-report=term
+
+# Fail if coverage below threshold
+poetry run pytest --cov=app --cov-fail-under=80
+
+# Run linting
+poetry run black --check app
+poetry run isort --check-only app
+poetry run flake8 app
+```
+
+### Quick Reference
+
+**Run tests:**
+```bash
+docker-compose exec api poetry run pytest
+```
+
+**Run with coverage:**
+```bash
+docker-compose exec api poetry run pytest --cov=app --cov-report=html -v
+```
+
+**Run specific test:**
+```bash
+docker-compose exec api poetry run pytest app/tests/api/v1/test_auth.py::test_login_success -v
+```
+
+**Run and stop on first failure:**
+```bash
+docker-compose exec api poetry run pytest -x
+```
+
+**Run with debugger:**
+```bash
+docker-compose exec api poetry run pytest --pdb
+```
+
+**View coverage:**
+```bash
+open htmlcov/index.html
+```
+
+---
+
+## Summary
+
+Write tests that are:
+- **Clear** - Easy to understand what's being tested
+- **Isolated** - No dependencies on other tests
+- **Fast** - Mock I/O, keep unit tests under 100ms
+- **Reliable** - No flakiness, deterministic results
+- **Maintainable** - Easy to update when code changes
+- **Comprehensive** - Cover happy path, edge cases, and errors
