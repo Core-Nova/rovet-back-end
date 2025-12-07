@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
 from app.controllers import auth_controller, user_controller
-from app.api.v1.endpoints import health, metrics
+from app.api.v1.endpoints import health, metrics, auth_keys
 
 api_router = APIRouter()
 
@@ -10,6 +10,12 @@ api_router.include_router(metrics.router, tags=["metrics"])
 
 api_router.include_router(
     auth_controller.router,
+    prefix="/auth",
+    tags=["authentication"]
+)
+
+api_router.include_router(
+    auth_keys.router,
     prefix="/auth",
     tags=["authentication"]
 )

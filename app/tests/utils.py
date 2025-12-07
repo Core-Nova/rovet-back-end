@@ -3,7 +3,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.security import get_password_hash
+from app.core.security import get_password_hash, create_access_token, create_refresh_token
 from app.models.user import User, UserRole
 
 
@@ -56,4 +56,14 @@ def create_test_admin(
         full_name=full_name, 
         role=UserRole.ADMIN,
         is_active=is_active
-    ) 
+    )
+
+
+def create_test_token(user_id: int, role: UserRole = UserRole.USER) -> str:
+    """Create a test access token for a user."""
+    return create_access_token(subject=user_id, role=role)
+
+
+def create_test_refresh_token(user_id: int) -> str:
+    """Create a test refresh token for a user."""
+    return create_refresh_token(subject=user_id) 

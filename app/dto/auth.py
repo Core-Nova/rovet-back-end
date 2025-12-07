@@ -1,18 +1,9 @@
 from pydantic import BaseModel, EmailStr
-from app.models.user import UserRole
+
+# TODO: If Config classes become repeatable across DTOs, extract to a common config module.
+# Nested classes are usually avoided in favor of shared configuration.
 
 
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
-
-
-class TokenResponse(BaseModel):
-    access_token: str
-    token_type: str
-
-
-class TokenPayload(BaseModel):
-    sub: int
-    role: UserRole
-    exp: int

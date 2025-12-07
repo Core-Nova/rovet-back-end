@@ -178,3 +178,8 @@ logs/
 /.idea
 test.db
 poetry.lock
+
+# RSA Keys (keep private key secret!)
+private_key.pem
+*.pem
+!public_key.pem.example

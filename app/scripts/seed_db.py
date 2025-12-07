@@ -9,11 +9,11 @@ def seed_users():
     try:
         print("Successfully connected to the database")
         
-        admin = db.query(User).filter(User.email == "admin@example.com").first()
+        admin = db.query(User).filter(User.email == "admin@rovet.io").first()
         if not admin:
             print("Creating admin user...")
             admin = User(
-                email="admin@example.com",
+                email="admin@rovet.io",
                 hashed_password=get_password_hash("admin123"),
                 full_name="Admin",
                 role=UserRole.ADMIN,
@@ -28,45 +28,45 @@ def seed_users():
 
         team_users = [
             {
-                "email": "luci@example.com",
-                "password": "user123",
-                "full_name": "Luci",
-                "role": UserRole.USER
-            },
-            {
-                "email": "eva@example.com",
-                "password": "user123",
-                "full_name": "Eva",
-                "role": UserRole.USER
-            },
-            {
-                "email": "tsetso@example.com",
-                "password": "user123",
-                "full_name": "Tsetso",
-                "role": UserRole.USER
-            },
-            {
-                "email": "nick@example.com",
-                "password": "user123",
-                "full_name": "Nick Bacon",
-                "role": UserRole.USER
-            },
-            {
-                "email": "rado@example.com",
-                "password": "user123",
-                "full_name": "Rado",
-                "role": UserRole.USER
-            },
-            {
-                "email": "kamen@example.com",
+                "email": "kamen@rovet.io",
                 "password": "user123",
                 "full_name": "Kamen",
                 "role": UserRole.USER
             },
             {
-                "email": "mario@example.com",
+                "email": "tsetso@rovet.io",
+                "password": "user123",
+                "full_name": "Tsetso",
+                "role": UserRole.USER
+            },
+            {
+                "email": "nick.bacon@rovet.io",
+                "password": "user123",
+                "full_name": "Nick Bacon",
+                "role": UserRole.USER
+            },
+            {
+                "email": "luci@rovet.io",
+                "password": "user123",
+                "full_name": "Luci",
+                "role": UserRole.USER
+            },
+            {
+                "email": "rado@rovet.io",
+                "password": "user123",
+                "full_name": "Rado",
+                "role": UserRole.USER
+            },
+            {
+                "email": "mario@rovet.io",
                 "password": "user123",
                 "full_name": "Mario",
+                "role": UserRole.USER
+            },
+            {
+                "email": "eva@rovet.io",
+                "password": "user123",
+                "full_name": "Eva",
                 "role": UserRole.USER
             }
         ]

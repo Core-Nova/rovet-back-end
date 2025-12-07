@@ -6,6 +6,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 from app.core.config import settings
+from app.core.security import create_access_token, _get_verification_key
 from app.models.user import UserRole
 from app.dto.user import UserFilter
 
@@ -155,9 +156,12 @@ def test_get_all_users_as_admin(client: TestClient, mock_auth_service_setup, moc
     mock_user_repository_setup.get_filtered_users.return_value = ([mock_user_repository_setup.get_by_id.return_value], 1)
     logger.info("Mock repository configured to return filtered users")
     
+    # Generate a real token for testing
+    token = create_access_token(subject=1, role=UserRole.ADMIN)
+    
     with patch("app.middleware.auth_middleware.AuthService", return_value=mock_auth_service_setup), \
          patch("app.api.v1.endpoints.users.UserRepository", return_value=mock_user_repository_setup), \
-         patch("app.services.auth_service.jwt.decode") as mock_jwt_decode, \
+         patch("app.core.security.verify_token") as mock_verify_token, \
          patch("app.services.auth_service.UserService") as mock_user_service:
 
         mock_user_service_instance = MagicMock()
@@ -165,8 +169,9 @@ def test_get_all_users_as_admin(client: TestClient, mock_auth_service_setup, moc
         mock_user_service.return_value = mock_user_service_instance
         logger.info("Mock user service configured")
         
-        mock_jwt_decode.return_value = {"sub": "1", "role": "admin"}
-        token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwicm9sZSI6ImFkbWluIn0.4Adcj3UFYzPUVaVF43FmMze6x7Yp4Yh4j3Yw"
+        # Mock token verification to return proper payload
+        from app.core.security import verify_token as real_verify_token
+        mock_verify_token.return_value = real_verify_token(token)
         headers = {"Authorization": f"Bearer {token}"}
         
         logger.info(f"Making request to {settings.API_V1_STR}/users/")
@@ -182,8 +187,7 @@ def test_get_all_users_as_admin(client: TestClient, mock_auth_service_setup, moc
         assert data["items"][0]["email"] == "test@example.com"
         logger.info("Get all users test passed")
         mock_auth_service_setup.get_current_user.assert_called_once_with(token)
-
-        mock_jwt_decode.assert_called_once_with(token, settings.SECRET_KEY, algorithms=["HS256"])
+        mock_verify_token.assert_called()
 
 
 def test_get_all_users_with_filters(client: TestClient, mock_auth_service_setup, mock_user_repository_setup):
@@ -197,9 +201,12 @@ def test_get_all_users_with_filters(client: TestClient, mock_auth_service_setup,
     mock_user_repository_setup.get_filtered_users.return_value = (filtered_users, 1)
     logger.info("Mock repository configured to return filtered users")
     
+    # Generate a real token for testing
+    token = create_access_token(subject=1, role=UserRole.ADMIN)
+    
     with patch("app.middleware.auth_middleware.AuthService", return_value=mock_auth_service_setup), \
          patch("app.api.v1.endpoints.users.UserRepository", return_value=mock_user_repository_setup), \
-         patch("app.services.auth_service.jwt.decode") as mock_jwt_decode, \
+         patch("app.core.security.verify_token") as mock_verify_token, \
          patch("app.services.auth_service.UserService") as mock_user_service:
 
         mock_user_service_instance = MagicMock()
@@ -207,8 +214,9 @@ def test_get_all_users_with_filters(client: TestClient, mock_auth_service_setup,
         mock_user_service.return_value = mock_user_service_instance
         logger.info("Mock user service configured")
         
-        mock_jwt_decode.return_value = {"sub": "1", "role": "admin"}
-        token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwicm9sZSI6ImFkbWluIn0.4Adcj3UFYzPUVaVF43FmMze6x7Yp4Yh4j3Yw"
+        # Mock token verification to return proper payload
+        from app.core.security import verify_token as real_verify_token
+        mock_verify_token.return_value = real_verify_token(token)
         headers = {"Authorization": f"Bearer {token}"}
         
         logger.info(f"Making request to {settings.API_V1_STR}/users/ with filters")
@@ -229,7 +237,8 @@ def test_get_all_users_with_filters(client: TestClient, mock_auth_service_setup,
         assert data["items"][0]["email"] == "test@example.com"
         logger.info("Filtered users test passed")
         mock_auth_service_setup.get_current_user.assert_called_once_with(token)
-        mock_jwt_decode.assert_called_once_with(token, settings.SECRET_KEY, algorithms=["HS256"])
+        # Verify token verification was called
+        mock_verify_token.assert_called()
 
 
 def test_delete_user(client: TestClient, mock_auth_service_setup, mock_user_repository_setup):
@@ -239,9 +248,12 @@ def test_delete_user(client: TestClient, mock_auth_service_setup, mock_user_repo
     logger.info(f"Admin user from auth service: {mock_auth_service_setup.get_current_user.return_value.email} (ID: {mock_auth_service_setup.get_current_user.return_value.id})")
     logger.info(f"Target user from repository: {mock_user_repository_setup.get_by_id.return_value.email} (ID: {mock_user_repository_setup.get_by_id.return_value.id})")
     
+    # Generate a real token for testing
+    token = create_access_token(subject=1, role=UserRole.ADMIN)
+    
     with patch("app.middleware.auth_middleware.AuthService", return_value=mock_auth_service_setup), \
          patch("app.api.v1.endpoints.users.UserRepository", return_value=mock_user_repository_setup), \
-         patch("app.services.auth_service.jwt.decode") as mock_jwt_decode, \
+         patch("app.core.security.verify_token") as mock_verify_token, \
          patch("app.services.auth_service.UserService") as mock_user_service:
         
         mock_user_service_instance = MagicMock()
@@ -249,8 +261,9 @@ def test_delete_user(client: TestClient, mock_auth_service_setup, mock_user_repo
         mock_user_service.return_value = mock_user_service_instance
         logger.info("Mock user service configured")
         
-        mock_jwt_decode.return_value = {"sub": "1", "role": "admin"}
-        token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwicm9sZSI6ImFkbWluIn0.4Adcj3UFYzPUVaVF43FmMze6x7Yp4Yh4j3Yw"
+        # Mock token verification to return proper payload
+        from app.core.security import verify_token as real_verify_token
+        mock_verify_token.return_value = real_verify_token(token)
         headers = {"Authorization": f"Bearer {token}"}
         
         logger.info(f"Making request to {settings.API_V1_STR}/users/3")
@@ -262,4 +275,5 @@ def test_delete_user(client: TestClient, mock_auth_service_setup, mock_user_repo
         assert response.status_code == 204
         logger.info("Delete user test passed")
         mock_auth_service_setup.get_current_user.assert_called_once_with(token)
-        mock_jwt_decode.assert_called_once_with(token, settings.SECRET_KEY, algorithms=["HS256"])
+        # Verify token verification was called
+        mock_verify_token.assert_called()

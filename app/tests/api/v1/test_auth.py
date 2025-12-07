@@ -6,6 +6,7 @@ from fastapi import HTTPException
 logger = logging.getLogger(__name__)
 
 from app.core.config import settings
+from app.core.security import create_access_token
 from app.models.user import UserRole
 
 
@@ -51,8 +52,25 @@ def test_register_existing_user(client: TestClient, mock_user_repository):
 
 
 def test_login_user(client: TestClient, mock_auth_service):
+    """Test user login returns both access and refresh tokens."""
     logger.info("Testing user login")
-    with patch("app.api.v1.endpoints.auth.AuthService", return_value=mock_auth_service):
+    
+    # Mock create_tokens to return real tokens
+    from app.core.security import create_access_token, create_refresh_token
+    mock_user = MagicMock(
+        id=1,
+        email="test@example.com",
+        full_name="Test User",
+        role=UserRole.USER,
+        is_active=True
+    )
+    mock_auth_service.authenticate_user.return_value = mock_user
+    mock_auth_service.create_tokens.return_value = (
+        create_access_token(subject=1, role=UserRole.USER),
+        create_refresh_token(subject=1)
+    )
+    
+    with patch("app.controllers.auth_controller.AuthService", return_value=mock_auth_service):
         data = {
             "email": "test@example.com",
             "password": "Test123!",
@@ -62,7 +80,10 @@ def test_login_user(client: TestClient, mock_auth_service):
         assert response.status_code == 200
         content = response.json()
         assert "access_token" in content
+        assert "refresh_token" in content
         assert content["token_type"] == "bearer"
+        assert "expires_in" in content
+        assert content["expires_in"] == settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
         logger.info("User login test passed")
 
 
@@ -82,6 +103,7 @@ def test_login_incorrect_password(client: TestClient, mock_auth_service):
 
 
 def test_get_current_user(client: TestClient, mock_auth_service):
+    """Test get current user with real token."""
     logger.info("Testing get current user")
     mock_user = MagicMock(
         id=1,
@@ -91,12 +113,12 @@ def test_get_current_user(client: TestClient, mock_auth_service):
         is_active=True
     )
     mock_auth_service.get_current_user.return_value = mock_user
-    mock_auth_service.verify_token.return_value = {"sub": "1", "role": UserRole.USER.value}
+    
+    # Generate a real token
+    token = create_access_token(subject=1, role=UserRole.USER)
     
     with patch("app.middleware.auth_middleware.AuthService", return_value=mock_auth_service), \
-         patch("app.services.auth_service.jwt.decode") as mock_decode:
-        mock_decode.return_value = {"sub": "1", "role": UserRole.USER.value}
-        token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwicm9sZSI6InVzZXIifQ.4Adcj3UFYzPUVaVF43FmMze6x7Yp4Yh4j3Yw"
+         patch("app.controllers.auth_controller.AuthService", return_value=mock_auth_service):
         headers = {"Authorization": f"Bearer {token}"}
         response = client.get(f"{settings.API_V1_STR}/auth/me", headers=headers)
         assert response.status_code == 200
@@ -106,6 +128,39 @@ def test_get_current_user(client: TestClient, mock_auth_service):
         assert data["role"] == UserRole.USER.value
         assert data["is_active"] is True
         logger.info("Get current user test passed")
+
+
+def test_refresh_token(client: TestClient, mock_auth_service):
+    """Test refresh token endpoint."""
+    logger.info("Testing refresh token")
+    
+    from app.core.security import create_access_token, create_refresh_token
+    
+    mock_user = MagicMock(
+        id=1,
+        email="test@example.com",
+        full_name="Test User",
+        role=UserRole.USER,
+        is_active=True
+    )
+    
+    refresh_token = create_refresh_token(subject=1)
+    new_access_token = create_access_token(subject=1, role=UserRole.USER)
+    new_refresh_token = create_refresh_token(subject=1)
+    
+    mock_auth_service.refresh_access_token.return_value = (new_access_token, new_refresh_token)
+    
+    with patch("app.controllers.auth_controller.AuthService", return_value=mock_auth_service):
+        data = {"refresh_token": refresh_token}
+        response = client.post(f"{settings.API_V1_STR}/auth/refresh", json=data)
+        logger.debug(f"Refresh response: {response.status_code}")
+        assert response.status_code == 200
+        content = response.json()
+        assert "access_token" in content
+        assert "refresh_token" in content
+        assert content["token_type"] == "bearer"
+        assert "expires_in" in content
+        logger.info("Refresh token test passed")
 
 
 def test_get_current_user_invalid_token(client: TestClient, mock_auth_service):

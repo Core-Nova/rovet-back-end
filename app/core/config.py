@@ -12,9 +12,17 @@ class Settings(BaseSettings):
     VERSION: str = os.getenv("VERSION", "1.0.0")
     API_V1_STR: str = "/api/v1"
     
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-here")  # Change this in production
-    ALGORITHM: str = "HS256"
+    # JWT Configuration
+    # For RS256 (RSA): Use JWT_PRIVATE_KEY and JWT_PUBLIC_KEY
+    # For HS256 (HMAC): Use SECRET_KEY (legacy, not recommended for microservices)
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-here")  # Legacy, for HS256
+    JWT_PRIVATE_KEY: Optional[str] = os.getenv("JWT_PRIVATE_KEY")  # RSA private key for signing
+    JWT_PUBLIC_KEY: Optional[str] = os.getenv("JWT_PUBLIC_KEY")  # RSA public key for verification
+    JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM", "RS256")  # RS256 for microservices, HS256 for legacy
+    JWT_ISSUER: str = os.getenv("JWT_ISSUER", "rovet-auth-service")  # Token issuer (iss claim)
+    JWT_AUDIENCE: str = os.getenv("JWT_AUDIENCE", "rovet-services")  # Token audience (aud claim)
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+    REFRESH_TOKEN_EXPIRE_DAYS: int = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
     
     PORT: int = int(os.getenv("PORT", "8001"))
     

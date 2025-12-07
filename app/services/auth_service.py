@@ -1,11 +1,11 @@
 from datetime import timedelta
 from typing import Optional
-from jose import jwt, JWTError
+from jose import JWTError
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.security import ALGORITHM, create_access_token
+from app.core.security import create_access_token, create_refresh_token, verify_token
 from app.exceptions.base import UnauthorizedException
 from app.services.user_service import UserService
 from app.models.user import User
@@ -19,23 +19,57 @@ class AuthService:
         self.db = db
         self.user_service = UserService(db)
 
-    def create_access_token(self, user: User) -> str:
-        logger.info(f"Creating access token for user {user.email}")
+    def create_tokens(self, user: User) -> tuple[str, str]:
+        """
+        Create both access and refresh tokens for a user.
+        
+        Returns:
+            Tuple of (access_token, refresh_token)
+        """
+        logger.info(f"Creating tokens for user {user.email}")
 
-        token = create_access_token(
+        # Include additional user information in token
+        additional_claims = {
+            "email": user.email,
+            "is_active": user.is_active,
+        }
+        if user.full_name:
+            additional_claims["name"] = user.full_name
+
+        access_token = create_access_token(
             subject=user.id,
             role=user.role,
-            expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+            expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
+            additional_claims=additional_claims
         )
-        logger.info("Access token created successfully")
-        return token
+        
+        refresh_token = create_refresh_token(
+            subject=user.id,
+            expires_delta=timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+        )
+        
+        logger.info(f"Tokens created successfully with algorithm {settings.JWT_ALGORITHM}")
+        return access_token, refresh_token
+    
+    def create_access_token(self, user: User) -> str:
+        """
+        Create a JWT access token for a user (legacy method).
+        
+        For new code, use create_tokens() to get both access and refresh tokens.
+        """
+        access_token, _ = self.create_tokens(user)
+        return access_token
 
     def verify_token(self, token: str) -> dict:
+        """
+        Verify a JWT token and return its payload.
+        
+        Uses RS256 (RSA) or HS256 (HMAC) based on configuration.
+        For microservices, RS256 is recommended as the public key can be shared.
+        """
         logger.info("Verifying token")
         try:
-            payload = jwt.decode(
-                token, settings.SECRET_KEY, algorithms=[ALGORITHM]
-            )
+            payload = verify_token(token)
             logger.info(f"Token decoded successfully. Payload: {payload}")
             if not payload.get("sub") or not payload.get("role"):
                 logger.error("Invalid token payload: missing required fields")
@@ -72,4 +106,35 @@ class AuthService:
             logger.error(f"User {email} is inactive")
             raise UnauthorizedException(detail="Inactive user")
         logger.info(f"Successfully authenticated user: {email}")
-        return user 
+        return user
+    
+    def refresh_access_token(self, refresh_token: str) -> tuple[str, str]:
+        """
+        Create new access and refresh tokens from a refresh token.
+        
+        Args:
+            refresh_token: Valid refresh token
+            
+        Returns:
+            Tuple of (new_access_token, new_refresh_token)
+        """
+        logger.info("Refreshing access token")
+        
+        # Verify refresh token
+        payload = verify_token(refresh_token)
+        
+        # Check token type
+        if payload.get("type") != "refresh":
+            raise UnauthorizedException(detail="Invalid token type")
+        
+        # Get user from token
+        user_id = int(payload.get("sub"))
+        user = self.user_service.get(user_id)
+        
+        if not user:
+            raise UnauthorizedException(detail="User not found")
+        if not user.is_active:
+            raise UnauthorizedException(detail="Inactive user")
+        
+        # Create new tokens
+        return self.create_tokens(user) 

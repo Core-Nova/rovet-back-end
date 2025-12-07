@@ -98,16 +98,29 @@ def mock_user_repository():
 
 @pytest.fixture(scope="function")
 def mock_auth_service():
+    """Create mock auth service with proper token structure."""
     logger.info("Creating mock auth service")
+    from app.core.security import create_access_token, create_refresh_token
+    
     mock_service = MagicMock()
-    mock_service.authenticate_user.return_value = MagicMock(
+    mock_user = MagicMock(
         id=1,
         email="test@example.com",
+        full_name="Test User",
         role=UserRole.USER,
         is_active=True
     )
-    mock_service.create_access_token.return_value = "mock_token"
-    mock_service.verify_token.return_value = {"sub": "1", "role": UserRole.USER}
+    mock_service.authenticate_user.return_value = mock_user
+    mock_service.create_tokens.return_value = (
+        create_access_token(subject=1, role=UserRole.USER),
+        create_refresh_token(subject=1)
+    )
+    mock_service.create_access_token.return_value = create_access_token(subject=1, role=UserRole.USER)
+    
+    # Mock verify_token to return proper payload structure
+    token = create_access_token(subject=1, role=UserRole.USER)
+    from app.core.security import verify_token
+    mock_service.verify_token.return_value = verify_token(token)
     logger.info("Mock auth service created")
     return mock_service
 

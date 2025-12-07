@@ -177,8 +177,14 @@ POSTGRES_DB=app_db
 POSTGRES_PORT=5432
 
 # Application
-SECRET_KEY=your-secret-key-here
+SECRET_KEY=your-secret-key-here  # Legacy, for HS256 fallback
 ACCESS_TOKEN_EXPIRE_MINUTES=30
+
+# JWT Configuration (Recommended for microservices)
+JWT_ALGORITHM=RS256
+# Generate keys with: python scripts/generate_rsa_keys.py
+JWT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
+JWT_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"
 
 # CORS
 BACKEND_CORS_ORIGINS=["http://localhost:3000","http://localhost:8001"]
@@ -426,6 +432,10 @@ app/
 
 ## Security
 
+- **RSA-signed JWT tokens (RS256)** - Industry-standard authentication for microservices
+  - Private key stays in auth service (secure)
+  - Public key can be shared with other microservices
+  - See `MICROSERVICE_AUTH_GUIDE.md` for integration details
 - All endpoints (except login and register) require JWT authentication
 - Admin endpoints are protected with role-based access control
 - Passwords are hashed using bcrypt
