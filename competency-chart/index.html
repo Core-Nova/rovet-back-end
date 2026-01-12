@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Competency Review Chart Generator</title>
+  
+  <!-- External Dependencies -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/layout.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <h1 class="header__title">🎯 Competency Review Chart</h1>
+      <p class="header__subtitle">
+        Create customizable radar charts for skills assessment. Export as PNG for Confluence.
+      </p>
+    </header>
+
+    <!-- Main Layout -->
+    <div class="main-layout">
+      <!-- Chart Section -->
+      <section class="card chart-section">
+        <div class="chart-section__header">
+          <h2 class="chart-section__title" id="chartTitleDisplay">Competency Review Chart</h2>
+          <div class="chart-section__actions">
+            <button class="btn btn--secondary" onclick="Controls.resetChart()">↺ Reset</button>
+            <button class="btn btn--primary" onclick="ChartRenderer.downloadImage('png')">⬇ PNG</button>
+            <button class="btn btn--secondary" onclick="Storage.exportConfig()">⬇ Save</button>
+            <label class="btn btn--secondary">
+              ⬆ Load
+              <input type="file" accept=".json" style="display: none;">
+            </label>
+          </div>
+        </div>
+
+        <div class="chart-container">
+          <canvas id="radarChart" class="chart-canvas"></canvas>
+          <div class="chart-tooltip" id="dragTooltip"></div>
+          <div class="chart-hint">
+            <svg class="chart-hint__icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11" />
+            </svg>
+            Drag points to adjust values
+          </div>
+        </div>
+
+        <div class="legend" id="legendPreview"></div>
+      </section>
+
+      <!-- Sidebar -->
+      <aside class="card sidebar">
+        <!-- Presets Section -->
+        <div class="sidebar-section">
+          <h3 class="section-title">Quick Presets</h3>
+          <div class="preset-buttons">
+            <button class="preset-btn" onclick="Controls.loadPreset('engineering')">Engineering</button>
+            <button class="preset-btn" onclick="Controls.loadPreset('leadership')">Leadership</button>
+            <button class="preset-btn" onclick="Controls.loadPreset('product')">Product</button>
+            <button class="preset-btn" onclick="Controls.loadPreset('design')">Design</button>
+            <button class="preset-btn" onclick="Controls.loadPreset('custom')">Blank</button>
+          </div>
+        </div>
+
+        <!-- Chart Title -->
+        <div class="sidebar-section">
+          <div class="form-group">
+            <label class="form-label">Chart Title</label>
+            <input 
+              type="text" 
+              class="form-input" 
+              id="chartTitle" 
+              value="Competency Review Chart" 
+              onchange="Controls.updateTitle()"
+            >
+          </div>
+        </div>
+
+        <!-- Axes Section -->
+        <div class="sidebar-section">
+          <h3 class="section-title">Axes / Competencies</h3>
+          <div class="axis-list" id="axesList"></div>
+          <button class="btn btn--secondary btn--full-width" onclick="Controls.addAxis()">
+            + Add Axis
+          </button>
+        </div>
+
+        <!-- Levels Section -->
+        <div class="sidebar-section">
+          <h3 class="section-title">Level Labels (inner to outer)</h3>
+          <div class="form-group">
+            <label class="form-label">Select Axis to Edit</label>
+            <select class="form-select" id="selectedAxis" onchange="Controls.renderLevels()"></select>
+          </div>
+          <div class="levels-list" id="levelsList"></div>
+          <div class="levels-actions">
+            <button class="btn btn--secondary btn--small" onclick="Controls.addLevel()" style="flex: 1;">
+              + Add Level
+            </button>
+            <button class="btn btn--secondary btn--small" onclick="Controls.removeLevel()" style="flex: 1;">
+              - Remove Level
+            </button>
+          </div>
+        </div>
+
+        <!-- Datasets Section -->
+        <div class="sidebar-section">
+          <h3 class="section-title">Evaluation Datasets</h3>
+          <div class="toggle-group" id="datasetToggles"></div>
+          <div id="datasetsContainer"></div>
+          <button class="btn btn--secondary btn--full-width" onclick="Controls.addDataset()">
+            + Add Dataset
+          </button>
+        </div>
+
+        <!-- Display Settings -->
+        <div class="sidebar-section">
+          <h3 class="section-title">Display Settings</h3>
+          
+          <div class="form-group">
+            <label class="form-label">Chart Size</label>
+            <select class="form-select" id="chartZoom" onchange="Controls.setChartZoom()">
+              <option value="0.8">Small (80%)</option>
+              <option value="1" selected>Normal (100%)</option>
+              <option value="1.25">Large (125%)</option>
+              <option value="1.5">Extra Large (150%)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Axis Labels</label>
+            <select class="form-select" id="labelMode" onchange="Controls.toggleLabelMode()">
+              <option value="text" selected>Text Labels (Supports, Learns...)</option>
+              <option value="numbers">Numbers (1, 2, 3...)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Label Font Size</label>
+            <select class="form-select" id="labelFontSize" onchange="ChartRenderer.update()">
+              <option value="9">Small (9px)</option>
+              <option value="11" selected>Medium (11px)</option>
+              <option value="13">Large (13px)</option>
+              <option value="15">Extra Large (15px)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Background</label>
+            <select class="form-select" id="bgOption">
+              <option value="white">White</option>
+              <option value="transparent">Transparent</option>
+              <option value="#f8fafc">Light Gray</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Export Resolution</label>
+            <select class="form-select" id="resolution">
+              <option value="1">Standard (1x)</option>
+              <option value="2" selected>High (2x)</option>
+              <option value="3">Ultra (3x)</option>
+            </select>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- JavaScript Modules -->
+  <script src="js/config.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/controls.js"></script>
+  <script src="js/chart.js"></script>
+  <script src="js/drag.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
+
