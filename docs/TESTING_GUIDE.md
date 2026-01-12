@@ -11,6 +11,9 @@ make test
 docker-compose exec api poetry run pytest
 ```
 
+
+
+
 ### View Coverage Report
 ```bash
 # Open HTML coverage report (macOS)
