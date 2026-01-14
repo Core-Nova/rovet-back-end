@@ -1,13 +1,24 @@
 /* ========================================
    Three.js Triangle Breakaway Image Slider
+   Dual Portrait Version for TREND Hair Boutique
    From: https://codepen.io/zadvorsky/pen/PNXbGo
-   Adapted for TREND Hair Boutique Studio
    ======================================== */
 
 (function() {
     'use strict';
 
-    // Wait for DOM to be ready
+    // Portrait images for left slider
+    var leftImages = [
+        'https://images.unsplash.com/photo-1595476108010-b4d1f102b1b1?w=600&h=900&fit=crop',
+        'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=600&h=900&fit=crop'
+    ];
+
+    // Portrait images for right slider
+    var rightImages = [
+        'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=600&h=900&fit=crop',
+        'https://images.unsplash.com/photo-1605497788044-5a32c7078486?w=600&h=900&fit=crop'
+    ];
+
     function ready(fn) {
         if (document.readyState !== 'loading') {
             fn();
@@ -17,13 +28,25 @@
     }
 
     ready(function() {
-        var container = document.getElementById('three-container');
-        if (!container) return;
-
-        // Suppress warnings
         console.warn = function() {};
 
-        var root = new THREERoot({
+        // Initialize left slider
+        var leftContainer = document.getElementById('three-container-left');
+        if (leftContainer) {
+            createSlider(leftContainer, leftImages);
+        }
+
+        // Initialize right slider (with slight delay for visual effect)
+        var rightContainer = document.getElementById('three-container-right');
+        if (rightContainer) {
+            setTimeout(function() {
+                createSlider(rightContainer, rightImages);
+            }, 500);
+        }
+    });
+
+    function createSlider(container, images) {
+        var root = new THREERoot(container, {
             createCameraControls: false,
             antialias: (window.devicePixelRatio === 1),
             fov: 80
@@ -35,14 +58,9 @@
         }
         root.camera.position.set(0, 0, 60);
 
-        var width = 100;
-        var height = 60;
-
-        // Salon images
-        var images = [
-            'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1200&h=800&fit=crop',
-            'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=1200&h=800&fit=crop'
-        ];
+        // Portrait dimensions (taller than wide)
+        var width = 60;
+        var height = 90;
 
         var slide = new Slide(width, height, 'out');
         var l1 = new THREE.ImageLoader();
@@ -67,12 +85,8 @@
 
         createTweenScrubber(tl, container);
 
-        window.addEventListener('keyup', function(e) {
-            if (e.keyCode === 80) {
-                tl.paused(!tl.paused());
-            }
-        });
-    });
+        return { root: root, timeline: tl };
+    }
 
     ////////////////////
     // CLASSES
@@ -273,7 +287,7 @@
     };
 
 
-    function THREERoot(params) {
+    function THREERoot(container, params) {
         params = utils.extend({
             fov: 60,
             zNear: 10,
@@ -281,7 +295,7 @@
             createCameraControls: true
         }, params);
 
-        var container = document.getElementById('three-container');
+        this.container = container;
 
         this.renderer = new THREE.WebGLRenderer({
             antialias: params.antialias,
@@ -326,11 +340,10 @@
             this.renderer.render(this.scene, this.camera);
         },
         resize: function () {
-            var container = document.getElementById('three-container');
-            if (!container) return;
+            if (!this.container) return;
             
-            var width = container.clientWidth;
-            var height = container.clientHeight;
+            var width = this.container.clientWidth;
+            var height = this.container.clientHeight;
             
             this.camera.aspect = width / height;
             this.camera.updateProjectionMatrix();
@@ -348,12 +361,6 @@
                 dst[key] = src[key];
             }
             return dst;
-        },
-        randSign: function () {
-            return Math.random() > 0.5 ? 1 : -1;
-        },
-        ease: function (ease, t, b, c, d) {
-            return b + ease.getRatio(t / d) * c;
         }
     };
 
@@ -377,7 +384,6 @@
         var _cx = 0;
         var mouseDown = false;
 
-        // Desktop - only on container
         container.addEventListener('mousedown', function(e) {
             mouseDown = true;
             container.style.cursor = 'ew-resize';
@@ -403,7 +409,6 @@
             }
         });
 
-        // Mobile - only on container
         container.addEventListener('touchstart', function(e) {
             _cx = e.touches[0].clientX;
             stop();
@@ -420,7 +425,6 @@
             seek(dx);
         }, {passive: true});
 
-        // Set initial cursor
         container.style.cursor = 'pointer';
     }
 
